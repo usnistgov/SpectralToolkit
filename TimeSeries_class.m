@@ -1,23 +1,16 @@
 classdef TimeSeries_class < handle
-    %Containt one time series channel, timeseries properties, and some 
-    % parameters estimated from the time series
-    %   Detailed explanation goes here
+    % Contains one time series channel, timeseries properties, and some 
     
     properties
-        Ts      % the Time Series ( a matlab timeseries object)
-        Fs      % FourierSeries
-        
+        Ts      % the Time Series ( a matlab timeseries object)        
         dataTable   % original data channels read in from a file
-        
-                
     end
     
     methods
         %% Constructor
         
         function self = TimeSeries_class(varargin)
-            %UNTITLED Construct an instance of this class
-            %   Detailed explanation goes here
+            %TimeSeries_class Construct an instance of this class
             
             % parses the incoming arguments
             validFileTypes = {'mat','csv','excel'};
@@ -52,25 +45,30 @@ classdef TimeSeries_class < handle
                 if ~isempty(self.dataTable)
                     timeVals = self.timeInfo2TimeVals(p.Results.TimeInfo);
                     loadTs(self,timeVals)                    
-                end
-                
-            end
+                end                
+            end            
+         end
             
             
-            
-        end
-            
-            
-         %%  
+         %% Plot override methods
+         function plot(self)
+             plot(self.Ts)
+             
+         end
             
          %% Loads a table from "File" and asks user which column to load
-         function loadTs(self,timeVals)
+         function loadTs(self,timeVals,colName)
           % Query's the user for a channel name and creates the timeseries TS
           % Timeseries creation requires a time vector of the same length as the data
-          headers = {self.dataTable.Properties.VariableNames{:}};          
-          disp('Data Header Names')
-          disp(headers(:))
-          colName = input('Time series to import: ');
+          
+          % colName is optional, if not included, display the columns and query the user
+          if nargin == 2
+              headers = {self.dataTable.Properties.VariableNames{:}};
+              disp('Data Header Names')
+              disp(headers(:))
+              colName = input('Time series to import: ');
+          end
+          
           dataVals = self.dataTable.(colName);
                   
           self.Ts = timeseries(dataVals,timeVals,'Name',colName);
@@ -79,6 +77,14 @@ classdef TimeSeries_class < handle
          %% Creates a time vector from TimeInfo structure data
          function timeVals = timeInfo2TimeVals(self,timeInfo)
              timeVals = (timeInfo.Start:size(self.dataTable,1)+timeInfo.Start-1)*timeInfo.Increment;
+         end
+         
+         %% Switch to another time series from the data table
+         function switchTs(self)
+             % switches the Ts to a new column of the data table.  
+             % This uses the same time vector as in the existing TS
+             timeVals = self.Ts.Time;
+             self.loadTs(timeVals)
          end
          
  
