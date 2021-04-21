@@ -21,7 +21,6 @@ classdef TimeSeries_class < handle
             p = inputParser;
             addParameter(p,'TimeInfo',defaultTimeInfo,@isstruct)
             addParameter(p,'File','',@ischar)
-            addParameter(p,'FileType','csv',checkFileType)
             
             parse(p,varargin{:})
             
@@ -31,7 +30,9 @@ classdef TimeSeries_class < handle
                     [~,~,ext] = fileparts(p.Results.File);
                     if strcmp(ext,'.csv') || strcmp(ext,'.xls')
                         disp('Loading Data Table')
-                        self.dataTable = readtable(p.Results.File);
+                        opts = detectImportOptions(p.Results.File);
+                        opts.PreserveVariableNames = true;  % allows underscores
+                        self.dataTable = readtable(p.Results.File,opts);
                         disp ('Data Table Load Complete')
                     else
                         warning('file %s does not exist',file)
@@ -52,8 +53,7 @@ classdef TimeSeries_class < handle
             
          %% Plot override methods
          function plot(self)
-             plot(self.Ts)
-             
+             plot(self.Ts)             
          end
             
          %% Loads a table from "File" and asks user which column to load
@@ -72,6 +72,18 @@ classdef TimeSeries_class < handle
           dataVals = self.dataTable.(colName);
                   
           self.Ts = timeseries(dataVals,timeVals,'Name',colName);
+          
+          % NB:  TimeInfo.Increment is supposed to auto-update.  If the timeVals
+          % are not uniformly spaced, the value will be "NAN".  
+          % However I found that with a timeVals standard deviation of only 5 x 10^-16 (floating point errors)
+          % the value would be "NAN".  So here we will check for ourselves
+          if isnan(self.Ts.TimeInfo.Increment)
+            if std(diff(timeVals))<1e-12
+                %self.Ts.TimeInfo.Increment = mean(diff(timeVals));     % being depricated by mathworks
+                self.Ts = setuniformtime(self.Ts,'Interval',mean(diff(timeVals)));
+            end
+          end
+          
          end
          
          %% Creates a time vector from TimeInfo structure data

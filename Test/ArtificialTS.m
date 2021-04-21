@@ -66,8 +66,8 @@ classdef ArtificialTS
             validScalarPosInt = @(x) isnumeric(x) && isscalar(x) && isinteger(x) && (x > 0);
             
             
-            addParameter(p,'Name',defaultName,@ischar)
-            addParameter(p,'Description',defaultDescription,@ischar)
+            addOptional(p,'Name',defaultName,@ischar)
+            addOptional(p,'Description',defaultDescription,@ischar)
             addOptional(p,'T0',defaultT0,validScalar);
             addOptional(p,'Extent',defaultExtent,validScalarPosNum);
             addOptional(p,'nSamples',defaultnSamples,validScalarPosInt);

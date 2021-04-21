@@ -65,7 +65,7 @@ classdef FourierSeries_class < handle
         %%-----------------------------------------------------------------
         function plot(self,varargin)
             % plot override functions
-            yscale = 'linear';
+            yScale = 'linear';
             yMsg = 'Amplitude';
             r = [];
             N = self.DataInfo.Length;
@@ -93,7 +93,7 @@ classdef FourierSeries_class < handle
                         ylims = varargin{i};
                     case {'residual','Residual'}
                         r = self.Residual;
-                    case {'yscale'}
+                    case {'yScale','yscale'}
                         i = i+1;
                         switch varargin{i}
                             case 'log'
