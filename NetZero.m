@@ -3,7 +3,9 @@ fig = 1; % control the figure numbering
 %% ------------------------------------------------------------------------
 %Set up the Time Series class
 %(comment out this section if the TS has already been set up)
-fileName = 'F:\Projects\NetZero\Data\132401_1000.csv';
+[file,path]=uigetfile('*.csv','Pick a sample data file');
+fileName = strcat(path,file);
+%fileName = 'F:\Projects\NetZero\Data\132401_1000.csv';
 TimeInfo.Units = 'seconds';
 TimeInfo.Increment = 1/300000;
 TimeInfo.Start = 0;
@@ -33,7 +35,6 @@ figure(fig); fig = fig+1;
 plot(TS)
 
 FS_V = FourierSeries_class('TimeSeries',TS.Ts,'Window','Rect');
-FS_V = FourierSeries_class('TimeSeries',TS.Ts);
 figure(fig); fig = fig+1;
 plot(FS_V,'SingleSided','yscale','log','ylim',[1e-4,1e3])
 
