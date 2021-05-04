@@ -15,11 +15,7 @@ function [f, A, ph, delta, eps] = IpDFT(X, N, kmax, fs, interpolator)
 % eps: variable to detect which is the second highest bin around kmax, i.e.
 % -1 and +1 corresponds to left and right side of kmax
 % further details are available in:
-% G. Frigo, A. Derviškadi? and M. Paolone, "Reduced Leakage Synchro...
-% phasor Estimation: Hilbert Transform Plus Interpolated DFT," in ...
-% IEEE Transactions on Instrumentation and Measurement, vol. 68, no. 10,...
-% pp. 3468-3483, Oct. 2019.
-
+% 
 %% Peak defintion
 df = fs/N; % DFT resolution, in Hz
 if kmax == -1 % in case of unknown kmax
