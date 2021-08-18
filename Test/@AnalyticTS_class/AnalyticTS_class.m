@@ -10,6 +10,23 @@ classdef AnalyticTS_class
     % combinations of only two sinusoidal components one harmonic or one
     % interharmonic
     
+% % signalparams  (Note that the labeling convention comes mostly from the standard)
+%     Xm = signalparams(1,:)*sqrt(2);     % phase amplitude (given by the user in RMS)
+%     Fin = signalparams(2,:);    % frequency (must be the same for all 6 channels or an error will be thrown
+%     Ps = signalparams(3,:);     % phase 
+%     Fh = signalparams(4,:);     % Frequency of the interfering signal
+%     Ph = signalparams(5,:);     % Phase of the interfering signal
+%     Kh = signalparams(6,:);     % index of the interfering signal    
+%     Fa = signalparams(7,:);     % phase (angle) moduation frequency
+%     Ka = signalparams(8,:);     % phase (angle) moduation index
+%     Fx = signalparams(9,:);     % amplitude moduation frequency
+%     Kx = signalparams(10,:);     % amplitude moduation index
+%     Rf = signalparams(11,:);     % ROCOF
+%     KaS = signalparams(12,:);   % phase (angle) step index
+%     KxS = signalparams(13,:);   % magnitude step index
+%     KfS = signalparams(14,:);   % frequency step index
+%     KrS = signalparams(15,:);   % ROCOF step index (another way to create a frequency ramp)
+%        
     
     properties
         Ts = timeseries()   % a single timeseries instance (see MATLAB timeseries object)
