@@ -11,7 +11,7 @@ t0 = obj.T0;
 SettlingTime = obj.SettlingTime;
 sizeMax = obj.Duration*obj.SampleRate;
 FSamp = obj.SampleRate;
-signalparams = obj.SignalParams;
+%signalparams = obj.SignalParams;
 
 % function [cSignal, wfSize] = AnalyticWaveforms(...
 %     t0, ...
@@ -20,7 +20,7 @@ signalparams = obj.SignalParams;
 %     FSamp, ...
 %     signalparams ...
 %     )
-[Xm,Fin,Ps,Fh,Ph,Kh,Fa,Ka,Fx,Kx,Rf,KaS,KxS,KfS,KrS] = obj.getParamIndex(signalparams);
+[Xm,Fin,Ps,Fh,Ph,Kh,Fa,Ka,Fx,Kx,Rf,KaS,KxS,KfS,KrS] = obj.getParamVals(obj.SignalParams);
 
 wfSize = sizeMax;    % this is the waveform NOT INCLUDING the settling time added to both ends
 
@@ -96,7 +96,7 @@ if ~(all(KfS == 0))
 end
 
 % Complex signals
-cSignal = (Ain.*exp(1i.*Theta));
+cSignal = (Ain.*exp(-1i.*Theta));
 
 %-------------------------debug: frequency plot--------------------------
 % Theta = unwrap(angle(cSignal(1,:)));

@@ -72,21 +72,21 @@ while(i<MaxNumIMFs)
            mVal(1:N,1) = 0;
        end
        
-       %------PLOT the rsig and the peak indexes
-       figure()
-       plot(rsigL,'-k')
-       hold on
-       pause
-       plot(peaksIdx,rsigL(peaksIdx),'og')
-       plot(bottomsIdx,rsigL(bottomsIdx),'db')
-       pause
-       plot(upperEnvelope,'-g')
-       plot(lowerEnvelope,'-b')
-       pause
-       plot (mVal,'-r')
-       hold off
-       pause
-       %------
+%        %------PLOT the rsig and the peak indexes
+%        figure()
+%        plot(rsigL,'-k')
+%        hold on
+%        %pause
+%        plot(peaksIdx,rsigL(peaksIdx),'og')
+%        plot(bottomsIdx,rsigL(bottomsIdx),'db')
+%        %pause
+%        plot(upperEnvelope,'-g')
+%        plot(lowerEnvelope,'-b')
+%        %pause
+%        plot (mVal,'-r')
+%        hold off
+%        %pause
+%        %------
        
        rsigL = rsigL - mVal;
        
@@ -100,10 +100,10 @@ while(i<MaxNumIMFs)
     
     % extract new IMF and subtract from residual
     IMFs(:,i+1) = rsigL;
-    figure()
-    plot(IMFs(:,i+1))
+    %figure()
+    % plot(IMFs(:,i+1))
     ylabel(sprintf('IMF %d',i+1))
-    pause
+    %pause
     rsig = rsig - IMFs(:,i+1);
     i = i +1;    
 end  % outer while loop

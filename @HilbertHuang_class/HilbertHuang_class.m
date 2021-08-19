@@ -38,12 +38,12 @@ classdef HilbertHuang_class
             defaultName = 'unamed';
             
             % checks for data validity
-            checkTsType @(x) isa(x,'timeseries')
+            checkTsType = @(x) isa(x,'timeseries');
                        
             % parse the incoming arguments
-            p = inputparser;
+            p = inputParser;
             addParameter(p,'Name',defaultName,@ischar)
-            addParameter(p,TimeSeries',timeseries(),checkTsType)
+            addParameter(p,'TimeSeries',timeseries(),checkTsType)
             
             parse(p,varargin{:})
             obj.Name=p.Results.Name;
@@ -51,7 +51,7 @@ classdef HilbertHuang_class
             % is a timeseries was passed in with the arguments, then
             % calculate the HHT
             if isempty(find(strcmp(p.UsingDefaults,'TimeSeies'),1))
-                obj.calcHHT(p.Results.TimeSeries)
+                obj = obj.calcHHT(p.Results.TimeSeries);
             end
         end
     end
@@ -67,7 +67,7 @@ end
 %%-------------------------------------------------------------------------
 methods (Access = public)
    
-    function calcHHT(obj,timeSeries)
+    function obj = calcHHT(obj,timeSeries)
         % calculates the IMFs and HHTs from the first column of timeseries
         % data
         obj.Name = timeSeries.Name;
@@ -75,10 +75,10 @@ methods (Access = public)
         
 
         % EMD of the first column of timeseries data
-        obj.Emd(timeSeries.Data(:,1));
-        obj.Hht();        
+        obj = obj.Emd(timeSeries.Data(:,1));
+        obj = obj.Hht();        
     end
     
 end
-
+end
 

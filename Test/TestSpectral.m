@@ -2,7 +2,7 @@
 %
 %   run these tests with two command-line commands:
 %   - testCase = TestSpectral;
-%   - res = run(testCase);
+%   - res = testCase.run;
 %
 classdef TestSpectral < matlab.unittest.TestCase
     %TESTSPECTRAL Unit testing got the Spectral Toolbox
@@ -12,13 +12,16 @@ classdef TestSpectral < matlab.unittest.TestCase
     properties
         TS      % Time Series class instance
         FS      % Fourier Series class instantance
+        
+        fig = 1;
     end
     
     methods (TestClassSetup)
         % any test class setup function calls should go here
-        function TcSetup (testCase)
-            createArtTsFile (testCase)
-        end
+         function TcSetup (testCase)
+%             createArtTsFile (testCase)  % only used to Fourier-based so moved into regressionTests function
+              testCase.TS = AnalyticTS_class();
+         end
         
     end
     
@@ -32,13 +35,21 @@ classdef TestSpectral < matlab.unittest.TestCase
         % res = run(testCase);
         function regressionTests (testCase)
             % All the listed functions will run.  Comment out any function you do not want to run
-            testTimeSeriesClass (testCase)
             
-            disp('Begin FourierSeries class testing')
-            testFourierSeriesClass (testCase)
-            testFourierPlots (testCase)
-            testFourierWindows (testCase)
-            % testLeakageFunctionPlots (testCase)   % not working yet
+%             %--------------------------------------------------------------
+%             %Tests of Fourier-based analysis methods
+%             createArtTsFile (testCase)
+%             testTimeSeriesClass (testCase)            
+%             disp('Begin FourierSeries class testing')
+%             testFourierSeriesClass (testCase)
+%             testFourierPlots (testCase)
+%             testFourierWindows (testCase)
+%             % testLeakageFunctionPlots (testCase)   % not working yet
+%             
+            %--------------------------------------------------------------
+            % Tests of Hilbert Huang based analysis
+            testHhtFmAnalysis(testCase);
+            
         end        
     end
     
@@ -209,7 +220,46 @@ classdef TestSpectral < matlab.unittest.TestCase
                 % the code in FourierSeries_class is not working yet.
             end
             
+            %--------------------------------------------------------------
+            % The goal of the following code is to ecersize all the code in the
+            % AnalyticTS_class
+            function testAnalyticTsClass
+                
+            end
             
+            %--------------------------------------------------------------
+            % code to test HHT analysis of windowed FM signal
+            function testCase = testHhtFmAnalysis(testCase)
+                
+                % Get a window of FM data
+                SignalParams = testCase.TS.SignalParams;
+                [~,~,~,~,~,~,Fa,Ka] = testCase.TS.getParamIndex();
+                SignalParams(Fa,:) = 2.0;
+                SignalParams(Ka,:) = 2.5;
+                % replace the default TS with a new one
+                testCase.TS = AnalyticTS_class('SignalParams',SignalParams);
+                Y = testCase.TS.getWindow(0,6);
+                
+                % Instatiate a HilbertHuang_class object.
+                % Passing a timeseries object triggers the analysis
+                increment = testCase.TS.Ts.TimeInfo.Increment;
+                HHT = HilbertHuang_class('TimeSeries',timeseries(real(Y)));  
+                
+                % frequency is the derivitive of phase with respect to time
+                increment = testCase.TS.Ts.TimeInfo.Increment;
+                fVector = HHT.Hilbert{4,1}/(increment*2*pi);
+                
+                % calculate the actual frequency from the complex Y
+                actAngle = angle(Y);
+                actFreq = gradient(unwrap(actAngle))/(2*pi*increment);
+                
+                figure(testCase.fig); testCase.fig = testCase.fig + 1;
+                subplot(2,1,1)
+                plot(fVector,'r');hold on;plot(actFreq,'b');hold off
+                subplot(2,1,2)
+                plot(fVector-actFreq)
+                
+            end
             
         
     end

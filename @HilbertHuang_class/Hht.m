@@ -1,4 +1,4 @@
-function P = Hht(obj)
+function obj = Hht(obj)
 
 IMFs = obj.IMFs;
 N = size(IMFs,2);
@@ -15,27 +15,27 @@ for i = 1:N
     title(sprintf('IMF %d', i))
     subplot(4,1,1)
     plot(real(sig),'-b')
-    pause
+    %pause
     hold on
     plot(imag(sig),'-r')
     hold off
     ylabel('analytic')
-    pause
+    %pause
     subplot(4,1,2)
     plot(energy)
     ylabel('energy')
-    pause
+    %pause
     subplot(4,1,3)
     plot(phaseAngle)
     ylabel('angle')
-    pause
+    %pause
     subplot(4,1,4)
     plot(omega)
     ylabel('freq')
-    pause
+    %pause
     %---------------------------------------------------------------------
     
-    P(i,:) = {sig,energy,phaseAngle,omega};
+    P(:,i) = {sig,energy,phaseAngle,omega};
 end
-obj.IMF = P;
+obj.Hilbert = P;
 end
