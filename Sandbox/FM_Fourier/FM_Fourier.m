@@ -6,7 +6,7 @@ TS = AnalyticTS_class();
 SignalParams = TS.SignalParams;
 SignalParams(Ps,:) = -90;    % creates a sine wave
 SignalParams(Fa,:) = 2;      % 2 Hz modulation
-SignalParams(Ka,:) = .5;    % +/- 5 Hz depth
+SignalParams(Ka,:) = .1;    % +/- 5 Hz depth
 TS = AnalyticTS_class('SignalParams',SignalParams);
 
 % Instantiate a FourierSeries_class object

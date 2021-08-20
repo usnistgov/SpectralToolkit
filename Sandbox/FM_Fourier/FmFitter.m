@@ -97,7 +97,7 @@ iterations = zeros(1,NPhases);
        FT.plot('SingleSided')
        xlim([0,100])
 
-       pause
+       %pause
        %---------------DEBUG---------------------------------------
       
        AF = sqrt(S(1)^2 + S(2)^2); phiF = atan2(-S(2),S(1));
@@ -122,9 +122,7 @@ iterations = zeros(1,NPhases);
        
        
     end
-
-
-
+    fprintf('Iter = %d, dFm = %1.4e\n',k,dFm);
 
 %--------------------------------------------------------------------------
 % local function to get the values of SignalParams

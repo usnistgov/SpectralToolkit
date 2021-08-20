@@ -27,7 +27,7 @@ ROCOFs = zeros(1,NPhases);
 
 
 wF = 2*pi*Freq;     % For large Km, this might not be a good intial guess.
-% try using Hilbert for a better initial guess
+%try using Hilbert for a better initial guess
 % h=hilbert(Samples);
 % hPhi = angle(h);
 % hF = gradient(unwrap(hPhi));
@@ -101,7 +101,7 @@ iterations = zeros(1,NPhases);
        FT.plot('SingleSided')
        xlim([0,100])
 
-       pause
+       %pause
        %---------------DEBUG---------------------------------------
        
        AF = sqrt(S(1)^2 + S(2)^2); phiF = atan2(-S(2),S(1));
@@ -111,8 +111,23 @@ iterations = zeros(1,NPhases);
        AU2 = sqrt(S(9)^2 + S(10)^2); phiU2 = atan2(-S(9),S(10));
        
        %LV reverse engineering - ModPhaseFit.vi
-       mi = (AU1*cos(phiU1 - phiF) - AL1*cos(phiL1-phiF)) + 1i*(AU1*sin(phiU1 - phiF) - AL1*sin(phiL1-phiF));
-       su = (AU1*cos(phiU1 - phiF) + AL1*cos(phiL1-phiF)) + 1i*(AU1*sin(phiU1 - phiF) + AL1*sin(phiL1-phiF));
+       mi = (....
+             (AU1*cos(phiU1 - phiF) + AU2*cos(phiU2 - phiF))...
+           - (AL1*cos(phiL1-phiF) + AL2*cos(phiL2 - phiF))...
+            )...
+           + 1i*(...
+                 (AU1*sin(phiU1 - phiF)+AU2*sin(phiU2 - phiF))...
+                 - (AL1*sin(phiL1-phiF)+AL2*sin(phiL2-phiF))...
+                 );
+       su = (...
+             (AU1*cos(phiU1 - phiF) * AU2*cos(phiU2 - phiF))...
+             + (AL1*cos(phiL1-phiF) + AL2*cos(phiL2 - phiF))...
+            )...
+            + 1i*(...
+                  (AU1*sin(phiU1 - phiF) + AU2*sin(phiU2 - phiF))...
+                  + (AL1*sin(phiL1-phiF))+(AL2*sin(phiL2 - phiF))...
+            );
+       
        fcos = abs(mi)*cos(angle(mi))/AF;
        fsin = abs(su)*sin(angle(su))/AF;
        acos = abs(su)*cos(angle(su))/AF;
@@ -128,6 +143,7 @@ iterations = zeros(1,NPhases);
        
        
     end
+    fprintf('Iter = %d, dFm = %1.4e\n',k,dFm);
 
 
 
