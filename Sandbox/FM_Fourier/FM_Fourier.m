@@ -5,7 +5,7 @@ TS = AnalyticTS_class();
 [~,~,Ps,~,~,~,Fa,Ka] = TS.getParamIndex();
 SignalParams = TS.SignalParams;
 SignalParams(Ps,:) = -90;    % creates a sine wave
-SignalParams(Fa,:) = 2;      % 2 Hz modulation
+SignalParams(Fa,:) = 5;      % 2 Hz modulation
 SignalParams(Ka,:) = 1;    % +/- 5 Hz depth
 TS = AnalyticTS_class('SignalParams',SignalParams);
 
@@ -19,8 +19,8 @@ F0 = TS.F0;
 AnalysisCycles = 6;
 SampleRate = TS.SampleRate;
 
-i = 1;
-%for i = 1:18
+%i = 1;
+for i = 1:18
     Samples = real(TS.getWindow(i,AnalysisCycles));
     
     FmFitter_2sb( ...
@@ -32,7 +32,7 @@ i = 1;
         SampleRate,...
         Samples ...
         );
-%end
+end
 
 
 
