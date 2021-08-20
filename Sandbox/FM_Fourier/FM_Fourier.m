@@ -6,7 +6,7 @@ TS = AnalyticTS_class();
 SignalParams = TS.SignalParams;
 SignalParams(Ps,:) = -90;    % creates a sine wave
 SignalParams(Fa,:) = 2;      % 2 Hz modulation
-SignalParams(Ka,:) = .1;    % +/- 5 Hz depth
+SignalParams(Ka,:) = 1;    % +/- 5 Hz depth
 TS = AnalyticTS_class('SignalParams',SignalParams);
 
 % Instantiate a FourierSeries_class object
@@ -19,7 +19,8 @@ F0 = TS.F0;
 AnalysisCycles = 6;
 SampleRate = TS.SampleRate;
 
-for i = 1:18
+i = 1;
+%for i = 1:18
     Samples = real(TS.getWindow(i,AnalysisCycles));
     
     FmFitter_2sb( ...
@@ -31,7 +32,7 @@ for i = 1:18
         SampleRate,...
         Samples ...
         );
-end
+%end
 
 
 
