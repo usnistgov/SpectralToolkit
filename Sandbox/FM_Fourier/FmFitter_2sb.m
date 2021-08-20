@@ -121,11 +121,8 @@ iterations = zeros(1,NPhases);
        AF = sqrt(S(1)^2 + S(2)^2); phiF = atan2(-S(2),S(1));
        AL1 = sqrt(S(3)^2 + S(4)^2); phiL1 = atan2(-S(4),S(3));
        AL2 = sqrt(S(5)^2 + S(6)^2); phiL2 = atan2(-S(6),S(5));
-       %AL2 = 0; phiL2 = 0;
        AU1 = sqrt(S(7)^2 + S(8)^2); phiU1 = atan2(-S(8),S(7));
-       %AU1 = sqrt(S(5)^2 + S(6)^2); phiU1 = atan2(-S(6),S(5));
        AU2 = sqrt(S(9)^2 + S(10)^2); phiU2 = atan2(-S(10),S(9));      
-       %AU2 = 0; phiU2 = 0;
        
        %LV reverse engineering - ModPhaseFit.vi
        mi = (....
