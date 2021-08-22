@@ -65,6 +65,7 @@ classdef FourierSeries_class < handle
         %%-----------------------------------------------------------------
         function plot(self,varargin)
             % plot override functions
+            bPolar3 = false;
             yScale = 'linear';
             yMsg = 'Amplitude';
             r = [];
@@ -103,7 +104,13 @@ classdef FourierSeries_class < handle
                                 yMsg = ('Amplitude (dB)');
                                 yScale = 'dB';
                         end
-                        
+                    case{'polar3','Polar3'}
+                        %3D polar stem plot (single sided)
+                        x = self.Freq(1:N_2+1);
+                        y = self.Data/N;
+                        y = y(1:N_2+1);
+                        y(2:end-1) = 2*y(2:end-1);
+                        bPolar3 = true;
                      otherwise
                         warning('Plot argument %s not supported',varargin{i})
                 end
@@ -122,8 +129,18 @@ classdef FourierSeries_class < handle
                y = 20*log10(y); 
             end
             
-            % plot function            
-            h=stem(x,y);       % you should never plot Frequency series with interpolated lines
+            % plot function   
+            if ~bPolar3
+                h=stem(x,y);       % you should never plot Frequency series with interpolated lines
+            else
+                plot3(x,real(y),imag(y),'o');
+                grid on
+                line([0,x(end)],[0,0],[0,0],'LineWidth',2,'Color','k')
+                for i=1:length(x)
+                    line([x(i),x(i)],[0,real(y(i))],[0,imag(y(i))])
+                end                
+            end
+            
             title(strcat('Frequency Series: ',self.Name),'Interpreter','none')
             msg = sprintf('Frequency (Hz) (Bin Width %5.2f)',self.FreqInfo.BinWidth);
             xlabel(msg)               

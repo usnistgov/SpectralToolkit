@@ -134,19 +134,18 @@ iterations = zeros(1,NPhases);
        % also plot an FFT of the original and of the fit
        ts = timeseries(Samples);
        ts = setuniformtime(ts,'Interval',1/SampleRate);
-       FT = FourierSeries_class('Timeseries',ts);       
+       FT_orig = FourierSeries_class('Timeseries',ts);       
        figure(2)
        subplot(2,1,1)
-       %FT.plot('SingleSided','yScale','log')
-       FT.plot('SingleSided')
+       FT_orig.plot('SingleSided')
        xlim([0,100])
        
        ts = timeseries(fit');
        ts = setuniformtime(ts,'Interval',1/SampleRate);
-       FT = FourierSeries_class('Timeseries',ts);
+       FT_fit = FourierSeries_class('Timeseries',ts);
        subplot(2,1,2)
        %FT.plot('SingleSided','yScale','log')
-       FT.plot('SingleSided')
+       FT_fit.plot('SingleSided')
        xlim([0,100])
 
        %pause
@@ -191,7 +190,10 @@ iterations = zeros(1,NPhases);
        
     end
     fprintf('Iter = %d, dFm = %1.4e\n',k,dFm);
-
+    figure(3)
+    FT_orig.plot('Polar3')
+    xlim([0,100])
+    pause
 
 
 
