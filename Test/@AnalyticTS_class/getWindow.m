@@ -24,7 +24,7 @@ function window = getWindow(obj,offset,analysisCycles)
             end
             window = W;
         end
-        plot(real(window))
+        %plot(real(window))
     end
 
 

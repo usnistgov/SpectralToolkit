@@ -68,6 +68,7 @@ classdef FourierSeries_class < handle
             bPolar3 = false;
             yScale = 'linear';
             yMsg = 'Amplitude';
+            yLimit = [];
             r = [];
             N = self.DataInfo.Length;
             N_2 = floor(self.DataInfo.Length/2);
@@ -86,6 +87,21 @@ classdef FourierSeries_class < handle
                     case 'Shift'
                         x = [-flip(self.Freq(2:N_2+1)); self.Freq(1:N_2)];
                         y = fftshift(abs(self.Data/N));
+                    case 'Phase'
+                        x = self.Freq(1:N_2+1);
+                        %y = angle(self.Data/N)*180/pi;
+                        y = angle(self.Data/N);
+                        y = y(1:N_2+1);
+                        y(2:end-1) = 2*y(2:end-1);
+                        ampl = abs(self.Data/N);
+                        ampl = ampl(1:N_2+1);
+                        ampl(2:end-1) = 2*ampl(2:end-1);
+                        y(ampl<.01)=0;
+                        y = wrapToPi(y)*180/pi;
+                        yMsg =('Phase (deg)');
+                        %yLimit =[-360,360];
+                        fprintf('sb angles 1: %d, 2: %d, 3: %d\n',round(y(25)-y(27)),round(y(24)-y(28)),round(y(23)-y(29)))
+                        
                     case 'xlim'
                         i = i+1;                        
                         xlims = varargin{i};  
@@ -132,6 +148,7 @@ classdef FourierSeries_class < handle
             % plot function   
             if ~bPolar3
                 h=stem(x,y);       % you should never plot Frequency series with interpolated lines
+                if ~isempty(yLimit),ylim(yLimit);end
             else
                 plot3(x,real(y),imag(y),'o');
                 grid on
