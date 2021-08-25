@@ -125,7 +125,6 @@ iterations = zeros(1,NPhases);
        FT = FourierSeries_class('Timeseries',ts);       
        figure(2)
        subplot(2,1,1)
-       %FT.plot('SingleSided','yScale','log')
        FT.plot('SingleSided')
        xlim([0,100])
        

@@ -193,7 +193,7 @@ iterations = zeros(1,NPhases);
     figure(3)
     FT_orig.plot('Polar3')
     xlim([0,100])
-    pause
+    %pause
 
 
 
