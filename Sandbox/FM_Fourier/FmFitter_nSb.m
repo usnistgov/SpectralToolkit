@@ -205,19 +205,35 @@ iterations = zeros(1,NPhases);
        acos = abs(su)*cos(angle(su))/AF(1);
        asin = abs(mi)*sin(angle(mi))/AF(1);
        dFm = sqrt(fcos^2 + fsin^2);
-       %ma = sqrt(asin^2 + acos^2);
-       %phia = atan2(asin,acos);
-       phia = atan2(fsin,fcos);
-       Af = (Af + dFm*exp(1i*phia));
+       ma = sqrt(asin^2 + acos^2);
+       phia = atan2(asin,acos);
+       phif(:) = atan2(fsin,fcos);
+       Af = (Af + dFm*exp(1i*phif(1)));
        if abs(dFm) < FitCrit
            break
        end
        Afm(:) = abs(Af); phif(:) = angle(Af);
        
     end
+    
+    
 
     fprintf('Iter = %d, dFm = %1.4e\n',k,dFm);
     fprintf('Afm = %f, phif = %f\n',Afm(1),phif(1)*180/pi)
+    
+    
+    
+    ka = abs(Af(1)); t1 = 0;
+    AF = AF*(1+ma*cos(phia));
+    phiF = phiF + abs(Af(1))*sin(angle(Af(1)));
+    Freqs = Freq + ka*fm*cos(2*pi*fm*t1 + phif);
+    ROCOFs = -ka*fm^2*sin(2*pi*fm*t1 + phif);
+    Ain = abs(AF(1));%*MagCorr(p);
+    Theta = phiF(1);% + DelayCorr(p)*1e-9*wF;
+    iterations = k;
+    
+    Synx = (Ain/sqrt(2).*exp(1i.*Theta)).';
+    
        
 %     figure(3)
 %     FT_orig.plot('Polar3')

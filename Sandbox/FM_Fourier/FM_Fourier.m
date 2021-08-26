@@ -21,9 +21,9 @@ F0 = TS.F0;
 AnalysisCycles = 25;
 SampleRate = TS.SampleRate;
 
-i = 1;
-%for i = 1:18
-    fprintf('DelayCorr: %f\n',wrapTo180(DelayCorr*180/pi));
+%i = 1;
+for i = 1:18
+    fprintf('Initial phif: %f\n',wrapTo180(DelayCorr*180/pi));
     Samples = real(TS.getWindow(i,AnalysisCycles));
     
     FmFitter_nSb( ...
@@ -36,7 +36,7 @@ i = 1;
         Samples ...
         );
     DelayCorr = DelayCorr+0.2513;
-%end
+end
 
 
 
