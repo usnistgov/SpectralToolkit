@@ -238,7 +238,7 @@ classdef TestSpectral < matlab.unittest.TestCase
                 SignalParams(Ka,:) = 2.5;
                 % replace the default TS with a new one
                 testCase.TS = AnalyticTS_class('SignalParams',SignalParams);
-                Y = testCase.TS.getWindow(0,6);
+                Y = testCase.TS.getWindow(0,25);
                 
                 % Instatiate a HilbertHuang_class object.
                 % Passing a timeseries object triggers the analysis

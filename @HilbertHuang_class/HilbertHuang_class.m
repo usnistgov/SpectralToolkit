@@ -12,8 +12,8 @@ classdef HilbertHuang_class
     %
     
     properties
-        Name
-        IMFs         % Cell Array of IMFs: (1 IMF per column ) 
+        Ts_In           % Timeseries input
+        IMFs            % Array of IMFs: (1 IMF per column ) 
                         % IMF{1,:) = signal
                         % IMF(1,:) = 
         Hilbert     % Cell Array of hilbert transform (complex) for each Intrinsic function 
@@ -22,8 +22,9 @@ classdef HilbertHuang_class
                         % Hilbert{3,:) = time series of phaseAngles for each IMF
                         % Hilbert{4,:} = time series of omega (angular frequency) values
                         %                each value falls between each time step in the time vector 
-        Time        
         Residual    % vector of input minus recombined hilbert transforms
+        
+        fig = 1;    % a counter for the number of figures
     end
     
     %% --------------------------------------------------------------------
@@ -34,34 +35,53 @@ classdef HilbertHuang_class
             % useage HilbertHuang_class(<name, value>)
             % optional arguments are name/value pairs:
             % name , (name)
-            % TimeSeries, (timeseries analysed (must be a matlab timeseries type)
-            defaultName = 'unamed';
+            % TimeSeries, timeseries input to EMD. Must be a matlab timeseries type), Only the first column wil be analysed
+            % EMD, (true or false): Perform and Empirical Mode Decomposition
+            % IMFs, timeseries containing intermediate mode functions, needed input if EMD is not performed
+            % Hilbert, (true or false): Perform a Hilbert Transform on the IMFs
+            % 
             
             % checks for data validity
             checkTsType = @(x) isa(x,'timeseries');
                        
             % parse the incoming arguments
             p = inputParser;
-            addParameter(p,'Name',defaultName,@ischar)
             addParameter(p,'TimeSeries',timeseries(),checkTsType)
+            addParameter(p,'EMD',false,@islogical)
+            addParameter(p,'IMFs',timeseries(),checkTsType)
+            addParameter(p,'Hilbert',false,@islogical)
             
             parse(p,varargin{:})
-            obj.Name=p.Results.Name;
+            obj.Ts_In = p.Results.TimeSeries;
+            obj.IMFs = p.Results.IMFs;
+            
+            if p.Results.EMD
+                obj = obj.Emd();
+            end
+            
+            if p.Results.Hilbert
+                obj = obj.Hht();
+            end
+                
             
             % is a timeseries was passed in with the arguments, then
             % calculate the HHT
-            if isempty(find(strcmp(p.UsingDefaults,'TimeSeies'),1))
-                obj = obj.calcHHT(p.Results.TimeSeries);
-            end
+%             if isempty(find(strcmp(p.UsingDefaults,'TimeSeries'),1))
+%                 obj.Time = p.Results.TimeSeries.Time;
+%                 obj.TimeInfo = p.Results.TimeSeries.TimeInfo;
+%                 obj = obj.calcHHT(p.Results.TimeSeries);
+%             end
         end
     end
  
      
 %%-------------------------------------------------------------------------
 %Public methods to calculate the IMFs using EMD and to calculate the Hilbert Transform
+% also a public methog to create plots
 methods (Access = public)
-    obj = Emd(obj,x)
+    obj = Emd(obj)
     obj = Hht(obj)
+    plot(obj,varargin)
 end
 
 %%-------------------------------------------------------------------------

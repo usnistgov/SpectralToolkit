@@ -1,6 +1,13 @@
-function obj = Emd(obj,x)
+function obj = Emd(obj)
 
 % empirical mode decomposition practice function
+%
+% Input:
+%   x must be a timeseries object.  inly the first data column will be analuses
+% Output:
+%   obj.IMFs is a cell array of time series objects, 
+
+x = obj.Ts_In.Data;
 
 MaxNumIMFs = 10;
 MaxEnergyRatio = 20;
@@ -24,7 +31,7 @@ outerLoopExitFlag = 0;
 
 while(i<MaxNumIMFs)
     % convergence checking
-    sprintf ('IMF %d',i)
+    %sprintf ('IMF %d\n',i);
     [peaksIdx, bottomsIdx] = localFindExtremaIdx(rsig);
         
     numResidExtrema = length(peaksIdx) + length(bottomsIdx);
@@ -100,15 +107,19 @@ while(i<MaxNumIMFs)
     
     % extract new IMF and subtract from residual
     IMFs(:,i+1) = rsigL;
+    
+    %----------- debug plot -------------------
     %figure()
     % plot(IMFs(:,i+1))
-    ylabel(sprintf('IMF %d',i+1))
+    %ylabel(sprintf('IMF %d',i+1));
     %pause
+    %------------------------------------------
     rsig = rsig - IMFs(:,i+1);
     i = i +1;    
 end  % outer while loop
 
-obj.IMFs = IMFs(:,1:i);
+obj.IMFs = timeseries(IMFs(:,1:i),obj.Ts_In.Time,'Name',strcat(obj.Ts_In.Name,' IMF'));
+obj.IMFs = setuniformtime(obj.IMFs,'StartTime',obj.IMFs.TimeInfo.Start,'EndTime',obj.IMFs.TimeInfo.End);
 obj.Residual = rsig;
 
 end  % function

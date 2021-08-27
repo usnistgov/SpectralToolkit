@@ -35,8 +35,7 @@ classdef AnalyticTS_class
         T0
         F0
         Duration
-        SettlingTime
-        
+        SettlingTime        
     end
     
     %% =========================================================================
@@ -94,7 +93,7 @@ classdef AnalyticTS_class
     % public methods found in a class method file
     methods (Access = public)
         obj = AnalyticWaveforms(obj)
-        window = getWindow(obj,offset,analysisCycles)
+        window = getWindow(obj,offset,analysisCycles,varargin)
     end
     %% =========================================================================
     % static methods found in a class method file
