@@ -36,8 +36,9 @@ mod_f = P(1).SignalParams(7, 1); % modulation frequency, Hz
 Fr = P.F0; % reporting rate, Hz
 Tr = 1/Fr; % reporting period, s
 r_axis = (Tw/2):Tr:(Tw/2 + Tr*(num_win - 1)); % reporting time axis, s
+r_axis = r_axis + (2*Tr);  % ARG:  I removed 3 records from the front of the data
 f_true = f_start - mod_k*mod_f*sin(2*pi*mod_f*r_axis + 0.1247); % true freq, Hz
-
+%f_true = f_start - mod_k*mod_f*sin(2*pi*mod_f*r_axis + 0); % true freq, Hz
 %% Hilbert analysis
 load low_pass_filter.mat
 % windows definition
@@ -87,5 +88,17 @@ plot(r_axis, f_est_hann, '-o')
 plot(r_axis, f_est_bhar, '-o')
 plot(r_axis, f_est_kais, '-o')
 hold off
-legend('true','hann','bl.-har.','kaiser')
+legend('true','hann','bl.-har.','kaiser','Location','southeastoutside')
 xlabel('Time (s)'), ylabel('Frequency (Hz)')
+figure()
+subplot(3,1,1)
+stem(r_axis(1:end-1),f_est_hann(1:end-1)-f_true(2:end))
+ylim([-0.02,0.02])
+title('Hanning error');
+subplot(3,1,2)
+stem(r_axis(1:end-1),f_est_bhar(1:end-1)-f_true(2:end))
+ylim([-0.02,0.02])
+title('B-H error');
+subplot(3,1,3)
+stem(r_axis(1:end-1),f_est_kais(1:end-1)-f_true(2:end))
+title('Kaiser error');
