@@ -30,7 +30,7 @@ r_axis = Tm/2 + t_axis(i_axis); % reporting time axis, s
 
 %% Signal and reference values
 x = A*cos(2*pi*f*t_axis + km*cos(2*pi*fm*t_axis - pi)); % signal
-
+x = awgn(x, 76, 'measured'); 
 f_ref = f - km*fm*sin(2*pi*fm*r_axis - pi); % frequency reference, Hz
 Rf_ref = -km*(2*pi*fm^2)*cos(2*pi*fm*r_axis - pi); % ROCOF reference, Hz/s
 

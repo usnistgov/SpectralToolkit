@@ -36,16 +36,55 @@ mod_f = P(1).SignalParams(7, 1); % modulation frequency, Hz
 Fr = P.F0; % reporting rate, Hz
 Tr = 1/Fr; % reporting period, s
 r_axis = (Tw/2):Tr:(Tw/2 + Tr*(num_win - 1)); % reporting time axis, s
-f_true = f_start + mod_k*mod_f*sin(2*pi*mod_f*r_axis - pi); % true freq, Hz
+f_true = f_start - mod_k*mod_f*sin(2*pi*mod_f*r_axis + 0.1247); % true freq, Hz
 
 %% Hilbert analysis
 load low_pass_filter.mat
+% windows definition
+win_hann = transpose(hann(Ns));
+win_bhar = transpose(blackmanharris(Ns));
+win_kais = transpose(kaiser(Ns, 2.5));
 
+% - Hanning
 for i = 1:num_win
     x = P(i).Samples(1,:);
     xf = filtfilt(Hlp.Numerator, 1, x);
-    z = hilbert(xf - mean(xf));
+    xw = xf.*win_hann;
+    z = hilbert(xw - mean(xw));
     instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
-    f_est(i) = instfreq(round(Ns/2));
+    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    f_est_hann(i) = instfreq(round(Ns/2));
 end
 
+% - blackmann-harris
+for i = 1:num_win
+    x = P(i).Samples(1,:);
+    xf = filtfilt(Hlp.Numerator, 1, x);
+    xw = xf.*win_bhar;
+    z = hilbert(xw - mean(xw));
+    instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
+    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    f_est_bhar(i) = instfreq(round(Ns/2));
+end
+
+% - kaiser
+for i = 1:num_win
+    x = P(i).Samples(1,:);
+    xf = filtfilt(Hlp.Numerator, 1, x);
+    xw = xf.*win_kais;
+    z = hilbert(xw - mean(xw));
+    instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
+    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    f_est_kais(i) = instfreq(round(Ns/2));
+end
+
+%% Comparison plot
+figure
+plot(r_axis(1:end-1), f_true(2:end), '-o')
+hold on
+plot(r_axis, f_est_hann, '-o')
+plot(r_axis, f_est_bhar, '-o')
+plot(r_axis, f_est_kais, '-o')
+hold off
+legend('true','hann','bl.-har.','kaiser')
+xlabel('Time (s)'), ylabel('Frequency (Hz)')
