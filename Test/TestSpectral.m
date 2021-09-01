@@ -14,6 +14,7 @@ classdef TestSpectral < matlab.unittest.TestCase
         FS      % Fourier Series class instantance
         
         fig = 1;
+        TestPath = fileparts(mfilename('fullpath'));   % path to this test class.
     end
     
     methods (TestClassSetup)
@@ -49,6 +50,7 @@ classdef TestSpectral < matlab.unittest.TestCase
             %--------------------------------------------------------------
             % Tests of Hilbert Huang based analysis
             testHhtFmAnalysis(testCase);
+            testHhtFmActualData(testCase);
             
         end        
     end

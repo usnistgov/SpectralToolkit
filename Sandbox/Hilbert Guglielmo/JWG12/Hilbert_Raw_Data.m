@@ -3,9 +3,9 @@ close all
 clc
 
 %% Load acquired data
-filename = 'SavedModWindows.mat'; % name of the mat file
-foldername = 'Downloads\'; % folder with the mat file
-path = 'C:\Users\gugli\'; % path to the folder
+path = fileparts(mfilename('fullpath'));   % path to this script.
+foldername = '\..\..\..\Test\Data\';
+filename = '50f0_2m0_2a5.mat'; % name of the mat file
 load([path, foldername, filename])
 
 %% Raw data setup
@@ -45,6 +45,8 @@ win_hann = transpose(hann(Ns));
 win_bhar = transpose(blackmanharris(Ns));
 win_kais = transpose(kaiser(Ns, 2.5));
 
+figure()
+
 % - Hanning
 for i = 1:num_win
     x = P(i).Samples(1,:);
@@ -52,7 +54,7 @@ for i = 1:num_win
     xw = xf.*win_hann;
     z = hilbert(xw - mean(xw));
     instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
-    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    %plot(instfreq),ylim([40,60]),title('Hanning'),drawnow,pause(0.1)
     f_est_hann(i) = instfreq(round(Ns/2));
 end
 
@@ -63,7 +65,7 @@ for i = 1:num_win
     xw = xf.*win_bhar;
     z = hilbert(xw - mean(xw));
     instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
-    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    %plot(instfreq),ylim([40,60]),title('Blackman-Harris'),drawnow,pause(0.1)
     f_est_bhar(i) = instfreq(round(Ns/2));
 end
 
@@ -74,12 +76,11 @@ for i = 1:num_win
     xw = xf.*win_kais;
     z = hilbert(xw - mean(xw));
     instfreq = Fs/(2*pi)*diff(unwrap(angle(z)));
-    % plot(instfreq),ylim([40,60]),drawnow,pause(0.1)
+    %plot(instfreq),ylim([40,60]),title('Kaiser'),drawnow,pause(0.1)
     f_est_kais(i) = instfreq(round(Ns/2));
 end
 
 %% Comparison plot
-figure
 plot(r_axis(1:end-1), f_true(2:end), '-o')
 hold on
 plot(r_axis, f_est_hann, '-o')
