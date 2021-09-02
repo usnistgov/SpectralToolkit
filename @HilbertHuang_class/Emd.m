@@ -7,7 +7,7 @@ function obj = Emd(obj)
 % Output:
 %   obj.IMFs is a cell array of time series objects, 
 
-x = obj.Ts_In.Data;
+x = real(obj.Ts_In.Data);
 
 MaxNumIMFs = 10;
 MaxEnergyRatio = 20;

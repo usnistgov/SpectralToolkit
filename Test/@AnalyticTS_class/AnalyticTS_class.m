@@ -64,7 +64,6 @@ classdef AnalyticTS_class
             validateSignalParams = @(x) validateattributes(x,{'double'},{'nrows',15});
             
             addParameter(p,'Name',defaultName,@ischar);
-            %addParameter(p,'Description',defaultDescription,@ischar);
             addParameter(p,'T0',defaultT0,validScalar);
             addParameter(p,'F0',defaultF0,validScalar);
             addParameter(p,'SampleRate',defaultSampleRate,validScalarPosNum);

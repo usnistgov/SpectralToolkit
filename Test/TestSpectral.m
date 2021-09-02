@@ -20,17 +20,16 @@ classdef TestSpectral < matlab.unittest.TestCase
     methods (TestClassSetup)
         % any test class setup function calls should go here
          function TcSetup (testCase)
-%             createArtTsFile (testCase)  % only used to Fourier-based so moved into regressionTests function
-              testCase.TS = AnalyticTS_class();
+             
          end
         
     end
     
-       methods (TestMethodSetup)
+    methods (TestMethodSetup)
         % any class setup function calls should go here
     end
     
-     
+    
     methods (Test)
         % These functions will be automatically run at the command line command:
         % res = run(testCase);
@@ -49,7 +48,7 @@ classdef TestSpectral < matlab.unittest.TestCase
 %             
             %--------------------------------------------------------------
             % Tests of Hilbert Huang based analysis
-            testHhtFmAnalysis(testCase);
+            %testHhtFmAnalysis(testCase);
             testHhtFmActualData(testCase);
             
         end        
@@ -230,38 +229,91 @@ classdef TestSpectral < matlab.unittest.TestCase
             end
             
             %--------------------------------------------------------------
-            % code to test HHT analysis of windowed FM signal
+            % code to test HHT analysis of simulated FM signal
             function testCase = testHhtFmAnalysis(testCase)
                 
                 % Get a window of FM data
+                testCase.TS = AnalyticTS_class();  % instantiate a default class
                 SignalParams = testCase.TS.SignalParams;
                 [~,~,~,~,~,~,Fa,Ka] = testCase.TS.getParamIndex();
                 SignalParams(Fa,:) = 2.0;
                 SignalParams(Ka,:) = 2.5;
-                % replace the default TS with a new one
-                testCase.TS = AnalyticTS_class('SignalParams',SignalParams);
-                Y = testCase.TS.getWindow(0,25);
-                
-                % Instatiate a HilbertHuang_class object.
-                % Passing a timeseries object triggers the analysis
-                increment = testCase.TS.Ts.TimeInfo.Increment;
-                HHT = HilbertHuang_class('TimeSeries',timeseries(real(Y)));  
-                
-                % frequency is the derivitive of phase with respect to time
-                increment = testCase.TS.Ts.TimeInfo.Increment;
-                fVector = HHT.Hilbert{4,1}/(increment*2*pi);
-                
-                % calculate the actual frequency from the complex Y
-                actAngle = angle(Y);
-                actFreq = gradient(unwrap(actAngle))/(2*pi*increment);
-                
-                figure(testCase.fig); testCase.fig = testCase.fig + 1;
+                testCase.TS = AnalyticTS_class('SignalParams',SignalParams,'SampleRate',48000,'Name','50f0\_2m0\_2a5');
+                                                
+                % loop over 1 second of data
+                % pre-allocate actual and expected values
+                act = zeros(testCase.TS.F0,1);
+                exp = act;
+                figure(testCase.fig),testCase.fig = testCase.fig + 1;
+                for i = 1:testCase.TS.F0
+                    Y = testCase.TS.getWindow(i-1,testCase.TS.F0/testCase.TS.SignalParams(Fa,1));
+                    % Instatiate a HilbertHuang_class object.
+                    % Passing a timeseries object triggers the analysis
+                    %increment = testCase.TS.Ts.TimeInfo.Increment;
+                    HHT = HilbertHuang_class('TimeSeries',Y,'EMD',true,'Window','none','Hilbert',true);
+                    
+                    % Experiment, window the IMF before Hilbert
+                    
+                    
+                    % frequency is the derivitive of phase with respect to time
+                    increment = testCase.TS.Ts.TimeInfo.Increment;
+                    fVector = HHT.Hilbert{4,1}/(2*pi);
+                    
+                    % calculate the actual frequency from the complex Y
+                    actAngle = angle(Y.Data);
+                    actFreq = gradient(unwrap(actAngle))/(2*pi*increment);
+                    
+                    subplot(2,1,1)
+                    plot(Y.Time,fVector,'r',Y.Time,actFreq,'b');  %hold on;plot(actFreq,'b');hold off
+                    ylim([40,60])
+                    subplot(2,1,2)
+                    plot(fVector-actFreq)
+                    ylim([-0.1,0.1])
+                    refresh,pause(0.1);
+                    
+                    idx = ceil(length(HHT.Hilbert{4,1})/2);
+                    act(i) = fVector(idx);
+                    exp(i)=Y.UserData.Freqs;
+                end
+                figure(testCase.fig),testCase.fig = testCase.fig + 1;
                 subplot(2,1,1)
-                plot(fVector,'r');hold on;plot(actFreq,'b');hold off
+                plot(exp,'b'),hold on,plot(act,'r'),hold off
+                ylim([40,60])
                 subplot(2,1,2)
-                plot(fVector-actFreq)
-                
+                plot(act-exp,'b')                                 
             end
+            
+            %--------------------------------------------------------------
+            % code to test HHT analysis of simulated FM signal
+            function testCase = testHhtFmActualData(testCase)
+                % tests actual data
+                prompt = ('Choose the Data to analyse');
+                file = uigetfile(strcat(testCase.TestPath,'\Data'),prompt);
+                load(file);
+                nS = length(P(1).Samples);
+                Fs = P(1).SampleRate;
+                tn = (-nS/2:(nS/2)-1)/Fs;
+                
+                
+                
+%                 for i = 1:numel(P)
+%                     testCase.TS = timeseries(P(i).Data,tn,'Name',strcat(
+%                     
+%                 end
+                % calculate the expected frequencies
+                
+                % To determine the starting phase offset of the modulation,
+                % perform a CFIT.
+                [x y] = prepareCurveData(tn,P(1).Samples(1,:));
+                
+                Fm = P(1).SignalParams(7,1);
+                Ka = P(1).SignalParams(8,1);
+                Tr = 1/P(1).F0;     % reporting rate
+                Tw = nS/Fs;         % duration of the window
+                expT = ((Tw/2):Tr:(Tw/2 + Tr*(numel(P)-1)))+(2*TR);
+                expFreqs = P(1).F0 - Ka*Fm*sin((2*pi*Fm*expT)+0.1247);
+            end
+            
             
         
     end

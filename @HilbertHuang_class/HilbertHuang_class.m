@@ -23,6 +23,7 @@ classdef HilbertHuang_class
                         % Hilbert{4,:} = time series of omega (angular frequency) values
                         %                each value falls between each time step in the time vector 
         Residual    % vector of input minus recombined hilbert transforms
+        Window      % if set to a recognized window type, will window the IMF before Hilbert, defaults to 'none'
         
         fig = 1;    % a counter for the number of figures
     end
@@ -50,10 +51,12 @@ classdef HilbertHuang_class
             addParameter(p,'EMD',false,@islogical)
             addParameter(p,'IMFs',timeseries(),checkTsType)
             addParameter(p,'Hilbert',false,@islogical)
+            addParameter(p,'Window','none',@ischar)
             
             parse(p,varargin{:})
             obj.Ts_In = p.Results.TimeSeries;
             obj.IMFs = p.Results.IMFs;
+            obj.Window = p.Results.Window;
             
             if p.Results.EMD
                 obj = obj.Emd();
