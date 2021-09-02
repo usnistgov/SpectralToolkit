@@ -119,7 +119,7 @@ while(i<MaxNumIMFs)
 end  % outer while loop
 
 obj.IMFs = timeseries(IMFs(:,1:i),obj.Ts_In.Time,'Name',strcat(obj.Ts_In.Name,' IMF'));
-obj.IMFs = setuniformtime(obj.IMFs,'StartTime',obj.IMFs.TimeInfo.Start,'EndTime',obj.IMFs.TimeInfo.End);
+obj.IMFs = setuniformtime(obj.IMFs,'StartTime',obj.Ts_In.TimeInfo.Start,'EndTime',obj.Ts_In.TimeInfo.End);
 obj.Residual = rsig;
 
 end  % function

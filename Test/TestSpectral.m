@@ -48,7 +48,7 @@ classdef TestSpectral < matlab.unittest.TestCase
 %             
             %--------------------------------------------------------------
             % Tests of Hilbert Huang based analysis
-            %testHhtFmAnalysis(testCase);
+            testHhtFmAnalysis(testCase);
             testHhtFmActualData(testCase);
             
         end        
@@ -250,10 +250,7 @@ classdef TestSpectral < matlab.unittest.TestCase
                     % Instatiate a HilbertHuang_class object.
                     % Passing a timeseries object triggers the analysis
                     %increment = testCase.TS.Ts.TimeInfo.Increment;
-                    HHT = HilbertHuang_class('TimeSeries',Y,'EMD',true,'Window','none','Hilbert',true);
-                    
-                    % Experiment, window the IMF before Hilbert
-                    
+                    HHT = HilbertHuang_class('TimeSeries',Y,'EMD',true,'Window','Hann','Hilbert',true);                                        
                     
                     % frequency is the derivitive of phase with respect to time
                     increment = testCase.TS.Ts.TimeInfo.Increment;
@@ -266,9 +263,11 @@ classdef TestSpectral < matlab.unittest.TestCase
                     subplot(2,1,1)
                     plot(Y.Time,fVector,'r',Y.Time,actFreq,'b');  %hold on;plot(actFreq,'b');hold off
                     ylim([40,60])
+                    title('Simulated Freq')
                     subplot(2,1,2)
                     plot(fVector-actFreq)
                     ylim([-0.1,0.1])
+                    title('Simulated Error')
                     refresh,pause(0.1);
                     
                     idx = ceil(length(HHT.Hilbert{4,1})/2);
@@ -279,6 +278,7 @@ classdef TestSpectral < matlab.unittest.TestCase
                 subplot(2,1,1)
                 plot(exp,'b'),hold on,plot(act,'r'),hold off
                 ylim([40,60])
+                title('Simulated Final')
                 subplot(2,1,2)
                 plot(act-exp,'b')                                 
             end
@@ -291,27 +291,90 @@ classdef TestSpectral < matlab.unittest.TestCase
                 file = uigetfile(strcat(testCase.TestPath,'\Data'),prompt);
                 load(file);
                 nS = length(P(1).Samples);
-                Fs = P(1).SampleRate;
-                tn = (-nS/2:(nS/2)-1)/Fs;
+                Fs = P(1).SampleRate; 
+                Ts = 1/Fs;
+                idxCenter = ceil(nS/2); % index to the center of the window
                 
+                % pre-allocate some results arrays
+                act = zeros(numel(P),1); exp = act;
+                phim = 0;       % initial guess for fitter modulation phase
                 
+                % we are going to filter the data:
+                % pass: 150 Hz, stop: 200 Hz, 3dB cutoff, 60 dB attenuation (order 948)
+                load('low_pass_filter.mat');
+                                               
+                figure(testCase.fig),testCase.fig=testCase.fig+1;
+                for i = 1:numel(P)
+                    yf = filtfilt(Hlp.Numerator,1,P(i).Samples(1,:).');
+                    %testCase.TS = timeseries(yf,tn,'Name',strcat(file,sprintf('# %d',i)));
+                    %testCase.TS =setuniformtime(testCase.TS,'StartTime',tn(1),'Interval',Ts);
+                    testCase.TS = timeseries(yf,'Name',strcat(file,sprintf('# %d',i)));
+                    testCase.TS =setuniformtime(testCase.TS,'StartTime',-nS/(2*Fs),'Interval',Ts);                    
+                    HHT = HilbertHuang_class('TimeSeries',testCase.TS,'EMD',true,'Window','Hann','Hilbert',true);
+                    
+                    actFreq = HHT.Hilbert{4}/(2*pi);
+                    act(i) = actFreq(idxCenter);
+                    
+                    % to get the expected values, perform a fit of the data to get the parameters
+                    t_axis = 0:Ts:(Ts*(nS - 1)); % time axis, s
+                    [x,y] = prepareCurveData(t_axis,P(i).Samples(1,:));
+                    % Set up fittype and options.
+                    ft = fittype( 'a*cos(2*pi*50*x + b + c*cos(2*pi*d*x + e))', 'independent', 'x', 'dependent', 'y' );
+                    opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
+                    opts.Display = 'Off';
+                    opts.StartPoint = [4.75 0 2 2.5 phim];
+                    
+                    % Fit model to data.
+                    [fitresult, gof] = fit( x, y, ft, opts );
+                    
+                    % check the fit quality
+                    rsqAct = gof.rsquare;
+                    rsqExp = 0.95;
+                    testCase.verifyGreaterThan(rsqAct,rsqExp)
+                    
+%----------------------------DEBUG-----------------------------------------                
+%                 % Plot fit with data.
+%                 figure( 'Name', 'FM_sine_hilb' );
+%                 h = plot( fitresult, x, y );
+%                 legend( h, 'x vs. t_axis', 'FM_sine_hilb', 'Location', 'NorthEast', 'Interpreter', 'none' );
+%                 % Label axes
+%                 xlabel( 't_axis', 'Interpreter', 'none' );
+%                 ylabel( 'x', 'Interpreter', 'none' );
+%                 grid on
+%--------------------------------------------------------------------------                    
+                    
+                    Ka = fitresult.c;
+                    Fm = fitresult.d;
+                    phim = fitresult.e;
+                    expFreq = P(i).F0 - Ka*Fm*sin((2*pi*Fm*t_axis')+phim);
+                    exp(i) = expFreq(idxCenter);
+                    
+                    %---------------------DEBUG----------------------------
+                    subplot(2,1,1)
+                    plot(testCase.TS.Time,expFreq,'-b',testCase.TS.Time,actFreq,'-r')
+                    ylim([40,60])
+                    title('Real Data Frequency')
+                    subplot(2,1,2)
+                    plot(testCase.TS.Time,actFreq-expFreq,'-k')
+                    ylim([-.2,.2])
+                    title('Error')
+                    %------------------------------------------------------
+                    
+                end
                 
-%                 for i = 1:numel(P)
-%                     testCase.TS = timeseries(P(i).Data,tn,'Name',strcat(
-%                     
-%                 end
-                % calculate the expected frequencies
+                t = 0:numel(P)-1;
+                figure(testCase.fig),testCase.fig=testCase.fig+1;
+                subplot(2,1,1)
+                plot(t,exp,'-b',t,act,'-r')
+                ylim([40,60])
+                title('Real Final')
+                subplot(2,1,2)
+                plot(t,act-exp,'-k')
+                ylim([-.02,.02])
                 
-                % To determine the starting phase offset of the modulation,
-                % perform a CFIT.
-                [x y] = prepareCurveData(tn,P(1).Samples(1,:));
+
                 
-                Fm = P(1).SignalParams(7,1);
-                Ka = P(1).SignalParams(8,1);
-                Tr = 1/P(1).F0;     % reporting rate
-                Tw = nS/Fs;         % duration of the window
-                expT = ((Tw/2):Tr:(Tw/2 + Tr*(numel(P)-1)))+(2*TR);
-                expFreqs = P(1).F0 - Ka*Fm*sin((2*pi*Fm*expT)+0.1247);
+
             end
             
             
