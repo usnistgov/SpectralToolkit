@@ -306,8 +306,6 @@ classdef TestSpectral < matlab.unittest.TestCase
                 figure(testCase.fig),testCase.fig=testCase.fig+1;
                 for i = 1:numel(P)
                     yf = filtfilt(Hlp.Numerator,1,P(i).Samples(1,:).');
-                    %testCase.TS = timeseries(yf,tn,'Name',strcat(file,sprintf('# %d',i)));
-                    %testCase.TS =setuniformtime(testCase.TS,'StartTime',tn(1),'Interval',Ts);
                     testCase.TS = timeseries(yf,'Name',strcat(file,sprintf('# %d',i)));
                     testCase.TS =setuniformtime(testCase.TS,'StartTime',-nS/(2*Fs),'Interval',Ts);                    
                     HHT = HilbertHuang_class('TimeSeries',testCase.TS,'EMD',true,'Window','Hann','Hilbert',true);

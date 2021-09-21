@@ -1,42 +1,38 @@
 % A script to perform a fourier analysis on a synthesized FM signal
 
-% Instantiate an AnalyticTS_class default instance
-TS = AnalyticTS_class();
-[~,~,Ps,~,~,~,Fa,Ka] = TS.getParamIndex();
-SignalParams = TS.SignalParams;
-SignalParams(Ps,:) = -90;    % creates a sine wave
-SignalParams(Fa,:) = 2;      % 2 Hz modulation
-SignalParams(Ka,:) = 2;    % +/- 5 Hz depth
-TS = AnalyticTS_class('SignalParams',SignalParams);
+% % Instantiate an AnalyticTS_class default instance
+% TS = AnalyticTS_class();
+% [~,~,Ps,~,~,~,Fa,Ka] = TS.getParamIndex();
+% SignalParams = TS.SignalParams;
+% SignalParams(Ps,:) = -90;    % creates a sine wave
+% SignalParams(Fa,:) = 0.9;      % 2 Hz modulation
+% SignalParams(Ka,:) = .1;    % +/- 5 Hz depth
+% TS = AnalyticTS_class('SignalParams',SignalParams);
 
-% Instantiate a FourierSeries_class object
-%FS = FourierSeries_class('TimeSeries',TS.Ts);
+% Instantiate a ModFit class
+ModFit = ModFit_class('Duration',2);
 
-%Set up for FmFitter
-DelayCorr = [0];
-%DelayCorr = 2.5656;
-%DelayCorr = -1.3090
-MagCorr = [1];
-F0 = TS.F0;
-AnalysisCycles = 25;
-SampleRate = TS.SampleRate;
+% This first experiment will show the low modulation index using the 2 sideband method
+% This experiment will loop through for 1 second of the waveform.  At the
+% end it will show the errors
+[~,~,Ps,~,~,~,Fa,Ka] = ModFit.TS.getParamIndex();
+ModFit.SignalParams(Ps,:) = -90;    % creates a sine wave (rather than the default cosine wave)
+ModFit.SignalParams(Fa,:) = 3.6;      % FM modulation frequency
+ModFit.SignalParams(Ka,:) = 0.3;    % Modulation Index
+ModFit.getTimeSeries();             % get the time series
+ModFit.TS.Ts.Name = 'test50f0_0m0_0a3';
 
-%i = 1;
-for i = 1:18
-    fprintf('Initial phif: %f\n',wrapTo180(DelayCorr*180/pi));
-    Samples = real(TS.getWindow(i,AnalysisCycles));
-    
-    FmFitter_nSb( ...
-        SignalParams,...
-        DelayCorr,...
-        MagCorr,...
-        F0,...
-        AnalysisCycles,...
-        SampleRate,...
-        Samples ...
-        );
-    DelayCorr = DelayCorr+0.2513;
-end
+
+ModFit.runMod1Second(true);
+ModFit.fig = ModFit.fig+1;          % increment the figure number for the next experiment
+
+% plot the fourier of the time series
+ts = timeseries(real(ModFit.TS.Ts.Data),'Name',ModFit.TS.Ts.Name);
+ts = setuniformtime(ts,'Interval',1/ModFit.Fs);
+ModFit.dispFourier(ts,ModFit.fig)
+ModFit.fig = ModFit.fig+2;          % increment the figure number for the next experiment
+
+
 
 
 
