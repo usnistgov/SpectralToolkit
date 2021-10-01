@@ -81,6 +81,7 @@ classdef ModFit_class < handle
     % Static Methods from external .m files
     methods(Static)
          [Synx,Freqs,ROCOFs, iterations] = ModFit2Sb(obj,Fin,Fm,Km,Samples,dt,MagCorr,DelayCorr);
+         [Synx,Freqs,ROCOFs, iterations] = ModFitNSb(Fin,Fm,Km,Samples,dt,MagCorr,DelayCorr)
     end
     
 %% -----------------------------------------------------------------------

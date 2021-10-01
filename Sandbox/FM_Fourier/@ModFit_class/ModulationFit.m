@@ -13,6 +13,6 @@ dt = 1/obj.Fs;
 if Km <= 0.375
     [Synx,Freqs,ROCOFs, iterations] = obj.ModFit2Sb(Fin,Fm,Km,real(obj.Window.Data),dt,obj.MagCorr,obj.DlyCorr);
 else
-    warning('Fitter cannot handle modulation index greater than %2f3',Kx)
+    [Synx,Freqs,ROCOFs, iterations] = obj.ModFitNSb(Fin,Fm,Km,real(obj.Window.Data),dt,obj.MagCorr,obj.DlyCorr);
 end
 end
