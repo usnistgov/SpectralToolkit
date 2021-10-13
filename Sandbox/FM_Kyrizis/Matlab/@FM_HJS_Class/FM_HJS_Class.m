@@ -2,19 +2,11 @@ classdef FM_HJS_Class < handle
     %FM_HJS_CLASS A port of the Hooke-Jeeves Student3 C program by
     % Gregory Kyriazis of InMetro
     %
-    %  Allen Goldstein, NIST
-    %
-    %   Major differences between this and the original CVIWindows code :
-    %       This has no user interface but is designed to be driven from
-    %   scripts, this allowing regression testing 
-    %       Also this will not only simulate waveforms (both modulated and
-    %   modulating), but also allows for sampled signals to be input
-    %
     % Citation:
     %Kyriazis G. A., “Estimating parameters of complex modulated signals from
     %prior information about their arbitrary waveform components,” IEEE Trans.
-    %Instrum. Meas., v. 62, no. 6, pp. 1681-1686, June 2013.
-    
+    %Instrum. Meas., v. 62, no. 6, pp. 1681-1686, June 2013.  
+    %
     % Citation: 
     % Kyriazis G. A., “A Cartesian method to improve the results and
     % save computation time in Bayesian signal analysis,” in Advanced
@@ -23,31 +15,86 @@ classdef FM_HJS_Class < handle
     % Pavese; W. Bremser; A.G. Chunovkina; N. Fischer; A.B. Forbes (eds.),
     % World Scientific, 2015, pp. 229-240.
     %
-    %   Detailed explanation goes here
+    %  Ported by Allen Goldstein, NIST
+    %
+    %   Major differences between this and the original CVIWindows code :
+    %       This has no user interface but is designed to be driven from
+    %   scripts, this allowing regression testing 
+    %       Also this will not only simulate waveforms (both modulated and
+    %   modulating), but also allows for sampled signals to be input
+    %
+    %
+    %   Steps to run a single test case with default parameters and simulated
+    %   modulating signal analysed via NLS and modulating signals analysed via BSA    
+    %         HJS = FM_HJS_Class()  % Instantiates the class with default properties
+    %         HJS.configure()       %        
+    %         HJS.mod_Freq_NLS()    %
+    %         HJS.mod_Amp_NLS()     %
+    %         HJS.plot('NLS')       %
+    %         HJS.Freq_BSA()        %
+    %         HJS.Ampl_BSA()        %
+    %         HJS.plot('BSA')       %      
+
+    
     
     properties 
-        Name
-        SignalParams
         
+% % SignalParams  (Note that the labeling convention comes mostly from the standard)
+%     Xm = signalparams(1,:)*sqrt(2);     % phase amplitude (given by the user in RMS)
+%     Fin = signalparams(2,:);    % frequency (must be the same for all 6 channels or an error will be thrown
+%     Ps = signalparams(3,:);     % phase 
+%     Fh = signalparams(4,:);     % Frequency of the interfering signal
+%     Ph = signalparams(5,:);     % Phase of the interfering signal
+%     Kh = signalparams(6,:);     % index of the interfering signal    
+%     Fa = signalparams(7,:);     % phase (angle) moduation frequency
+%     Ka = signalparams(8,:);     % phase (angle) moduation index
+%     Fx = signalparams(9,:);     % amplitude moduation frequency
+%     Kx = signalparams(10,:);     % amplitude moduation index
+%     Rf = signalparams(11,:);     % ROCOF
+%     KaS = signalparams(12,:);   % phase (angle) step index
+%     KxS = signalparams(13,:);   % magnitude step index
+%     KfS = signalparams(14,:);   % frequency step index
+%     KrS = signalparams(15,:);   % ROCOF step index (another way to create a frequency ramp)
+%        
+        SignalParams         % an array of signal parameters as documented above
+   
+% % NoiseParams A structure as follows:
+% struct NoiseParams('NoiseUniformLow',0,'NoiseUniformHi',0,'NoiseGaussMean',0,'NoiseGaussSD',0)
+%         NoiseUniformLow % double Uniform distribution noise lowest value
+%         NoiseUniformHi  % double Uniform distribution noise highest value
+%         NoiseGaussMean  % double noise mean value
+%         NoiseGaussSD    % double noise standard deviation
+%         RngState = -1   % state of the random number generator.  -1 means no initial state                       
+        AmplNoiseParams      % a structure of amplitude noise parameters 
+        PhaseNoiseParams     % a structure of phase noise parameters as documented above
+        
+        % needed info for any signal, simulated or not
         Duration        % signal duration in seconds
-        SampleRate
-        Sigma
+        SampleRate      % Samples per Second
         NumHarm
         
-        data            % The modulating signal.  Can be input using the 
-                        % GenModData constructor argument.  If not, then a simulated
-                        % signal will be generated during obj.configure().  This may also be overwritten later.
+        % The modulating signal.  Can be input using the 
+        % GenModData constructor argument.  If not, then a simulated
+        % signal will be generated during obj.configure().  This may also be overwritten later.        
+        data            % The modulating signal (simulated or uploadded   
+           
+        % The modulated signal.  Can be input using the GenData constructor argument.        
+        % if not, then a simulated signal will be generated during obj.configure().  This may be overwritten later.
+        data1           
                         
-        data1           % The modulated signal.  Can be input using the GenData constructor argument.
-                        % if not, then a simulated signal will be generated during obj.configure().  This may be overwritten later.
- 
-       % Modulating Signal properties 
+        phaseNoise      % Phase Noise to be added to the phase of the modulating signal, modulated signal, or both 
+        amplNoise       % Amplitude Noise to be added
+        modNoise        % logical value "True" if noise is to be applied to the modulating signal
+        sigNoise        % logical value "True" if noise is to be applied to the modulated signal
+        
+        
+       % Modulating Signal parameters 
        Ampl_Gen_Mod     % Normally set by SignalParams, but can be overwritten after obj.configure() runs
        Freq_Gen_Mod     % Normally set by SignalParams, but can be overwritten after obj.configure() runs
        Phi_Gen_Mod      % Defaults to 0 but can be overwritten after obj.configure() runs
        dc_Gen_Mod       % Defaults to 0 but can be overwritten after obj.configure() runs
        
-       % Modulated Signal properties
+       % Modulated Signal parameters
        Ampl_Gen
        Freq_Gen
        Phi_Gen
@@ -55,8 +102,8 @@ classdef FM_HJS_Class < handle
        DeltaF_Gen       % peak frequency deviation
                         
                         
-                        
-        verbose         % boolean to show status messages
+        Name                       
+        verbose         % logical to show status messages if "true"
         
     end
     
@@ -65,6 +112,7 @@ classdef FM_HJS_Class < handle
        Tsamp    % sample period
        ino
        ifun     % number of harmonics to fit       
+       noiseTs         % a time series containing only the additive noise.
        Gaussrnd
        
        % NLS of the modulating signal
@@ -103,40 +151,46 @@ classdef FM_HJS_Class < handle
 
        fig = 1
              
-   end
-   
-% % signalparams  (Note that the labeling convention comes mostly from the standard)
-%     Xm = signalparams(1,:)*sqrt(2);     % phase amplitude (given by the user in RMS)
-%     Fin = signalparams(2,:);    % frequency (must be the same for all 6 channels or an error will be thrown
-%     Ps = signalparams(3,:);     % phase 
-%     Fh = signalparams(4,:);     % Frequency of the interfering signal
-%     Ph = signalparams(5,:);     % Phase of the interfering signal
-%     Kh = signalparams(6,:);     % index of the interfering signal    
-%     Fa = signalparams(7,:);     % phase (angle) moduation frequency
-%     Ka = signalparams(8,:);     % phase (angle) moduation index
-%     Fx = signalparams(9,:);     % amplitude moduation frequency
-%     Kx = signalparams(10,:);     % amplitude moduation index
-%     Rf = signalparams(11,:);     % ROCOF
-%     KaS = signalparams(12,:);   % phase (angle) step index
-%     KxS = signalparams(13,:);   % magnitude step index
-%     KfS = signalparams(14,:);   % frequency step index
-%     KrS = signalparams(15,:);   % ROCOF step index (another way to create a frequency ramp)
-%        
-   
+   end   
+
    
     %% =========================================================================
    % Constructor
     methods
         function obj = FM_HJS_Class(varargin)
+            % The constructor accepts name,value pair arguments.  If the
+            % argument is not included in the constructor call the default
+            % value will ne used.  the arguments and their default values
+            % are shown here:
+            %
+            % Example: FM_HJS_Class(Name1,Value1,Name2,Value2,...NameN,ValueN,)
+            %
+            % Argument Name    , type  , default value           % comment
+            % 'Name'           , char  , 'default FM_HJS'        % 
+            % 'SampleRate'     , double,  1/.00006520            %
+            % 'Duration'       , double,  8000/defaultSampleRate % signal duration in seconds
+            % 'SignalParams    , 15 x 1 array of doubles, [1,49.9876543210,0,0,0,0,4.9876543210,5,0,0,0,0,0,0,0]' % See the SignalParams property description
+            % 'PhaseNoiseParams', struct, struct('NoiseUniformLow',0,'NoiseUniformHi',0,'NoiseGaussMean',0,'NoiseGaussSD',0.000001) %
+            % 'AmplNoiseParams' , struct, struct('NoiseUniformLow',0,'NoiseUniformHi',0,'NoiseGaussMean',0,'NoiseGaussSD',0.000001) %
+            % 'ModNoise'        , logical, 'true'                 % if true, phase noise will be added to the simulated modulating signal
+            % 'SigNoise'        , logical, 'true'                 % if true, Amplitude noise will be added to the simulated modulated signal
+            % 'NumHarm'         , 3                               % Number of harmonics to use during NLS and BSA analysis
+            % 'GenModData'      , []                              % Uploaded modulating signal.  If empty, a simulated signal will be created
+            % 'GenData'         , []                              % Uploaded modulated signal.  If empty, a simulated signal will be created
+            % 'Verbose'         , 'true                           % If true, computed values will be displayed in the console
+                        
             defaultName = 'default FM_HJS';
             defaultSignalParams = [1,49.9876543210,0,0,0,0,4.9876543210,5,0,0,0,0,0,0,0]';
             defaultSampleRate = 1/.00006520;  % samples per second
             defaultDuration = 8000/defaultSampleRate;
-            defaultSigma = 0.000001;
             defaultNumHarm = 3;
             defaultGenModData = [];
             defaultGenData = [];
             defaultVerbose = true;
+            defaultNoiseParams = struct('NoiseUniformLow',0,'NoiseUniformHi',0,'NoiseGaussMean',0,'NoiseGaussSD',0.000001);
+            defaultModNoise = true;
+            defaultSigNoise = true;
+            
             
             p = inputParser;
             
@@ -144,16 +198,21 @@ classdef FM_HJS_Class < handle
             validScalar = @(x) isnumeric(x) && isscalar(x);
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);            
             validateSignalParams = @(x) validateattributes(x,{'double'},{'nrows',15});
+            validateStruct = @(x) isstruct(x);
 
-            addParameter(p,'Name',defaultName,@ischar);
-            addParameter(p,'SampleRate',defaultSampleRate,validScalarPosNum);
-            addParameter(p,'Duration',defaultDuration,validScalarPosNum);
-            addParameter(p,'SignalParams',defaultSignalParams,validateSignalParams);
-            addParameter(p,'Sigma',defaultSigma,validScalar);
+            addParameter(p,'Name',defaultName,@ischar)
+            addParameter(p,'SampleRate',defaultSampleRate,validScalarPosNum)
+            addParameter(p,'Duration',defaultDuration,validScalarPosNum)
+            addParameter(p,'SignalParams',defaultSignalParams,validateSignalParams)
+            addParameter(p,'PhaseNoiseParams',defaultNoiseParams,validateStruct)
+            addParameter(p,'AmplNoiseParams',defaultNoiseParams,validateStruct)
+            addParameter(p,'ModNoise',defaultModNoise,validBool)
+            addParameter(p,'SigNoise',defaultSigNoise,validBool)            
             addParameter(p,'NumHarm',defaultNumHarm,validScalarPosNum)
-            addParameter(p,'GenModData',defaultGenModData);
-            addParameter(p,'GenData',defaultGenData);            
-            addParameter(p,'Verbose',defaultVerbose,validBool);
+            addParameter(p,'GenModData',defaultGenModData)
+            addParameter(p,'GenData',defaultGenData)            
+            addParameter(p,'Verbose',defaultVerbose,validBool)
+            
             
             parse(p,varargin{:})
             
@@ -161,7 +220,11 @@ classdef FM_HJS_Class < handle
             obj.SampleRate = p.Results.SampleRate;
             obj.Duration = p.Results.Duration;
             obj.SignalParams = p.Results.SignalParams;
-            obj.Sigma = p.Results.Sigma;
+            obj.PhaseNoiseParams = p.Results.PhaseNoiseParams;
+            obj.AmplNoiseParams = p.Results.AmplNoiseParams;
+            obj.modNoise = p.Results.ModNoise;
+            obj.sigNoise = p.Results.SigNoise;            
+            %obj.Sigma = p.Results.Sigma;
             obj.NumHarm = p.Results.NumHarm;
             obj.data = p.Results.GenModData;
             obj.data1 = p.Results.GenData;
@@ -183,10 +246,22 @@ classdef FM_HJS_Class < handle
     %% =========================================================================
     % Public Methods
     methods (Access = public)
-        function configure(obj)   
+        function configure(obj) 
+            % Configures the sample period and number of harmonics to analyse.
+            % Generates random noise properties for later use
+            % Configures modulating signal parameters and generates the modulating signal if it was not previously uploaded
+            % Configures NLS properties for analysis of the modulating signal
+            % Configures modulated signal parameters
+            % Generates the modulated signal if it was not previously uploaded
+            % Configures BSA properties for analysis of the modulated signal
+            
             obj.Tsamp = 1/obj.SampleRate;
             obj.ifun = 2*obj.NumHarm+1;
             [Xm,Fin,Ps,~,~,~,Fa,Ka] = obj.getParamVals(obj.SignalParams);
+            
+            % generate Phase Noise and Amplitude Noise
+            obj.phaseNoise = obj.genNoise(obj.PhaseNoiseParams,obj.ino);
+            obj.amplNoise = obj.genNoise(obj.AmplNoiseParams,obj.ino);
             
             % Modualting Signal
             obj.Ampl_Gen_Mod = 1;
@@ -211,22 +286,26 @@ classdef FM_HJS_Class < handle
             % BSA
             obj.iterMax_BSA = 5000;
             obj.epsilon_BSA = 1e-8;
-            obj.rho_BSA = 0.85;            
+            obj.rho_BSA = 0.85;  
+            
             
         end
                 
         function genwave(obj)
             % generates a simulated modulation signal
             % Note, may be expanded in the future to include triangular and square wave modulations
-            obj.Gaussrnd = obj.Sigma*randn(obj.ino,1);            
+            
+            
+            %obj.Gaussrnd = obj.Sigma*randn(obj.ino,1);            
             t = linspace(0,double(obj.ino)*obj.Tsamp-obj.Tsamp,obj.ino)';
             
              obj.data = obj.Ampl_Gen_Mod*cos(2*pi*obj.Freq_Gen_Mod*t-pi/2);
-             obj.data = obj.data+obj.Gaussrnd;   
+             if obj.modNoise, obj.data = obj.data+obj.phaseNoise; end   
         end
         
         function mod_Freq_NLS(obj)
             % Least-Squared fit of the modulation signal
+            
             new_bi = zeros(obj.ifun+1,1);
             startpt_NLS = 2*pi*obj.Freq_Gen_Mod*obj.Tsamp;
             omega2 = startpt_NLS;
@@ -272,7 +351,10 @@ classdef FM_HJS_Class < handle
             
         end
         
-        function mod_Amp_NLS(obj)            
+        function mod_Amp_NLS(obj)   
+            % Using the results calculated by mod_Freq_NLS(), 
+            % calculates the amplitude and phase of the modulating signal
+            
             % intialize the coeffs with the results from mod_Freq_NLS
             a_NLS = zeros((obj.ifun+1)/2,1);
             b_NLS = a_NLS;
@@ -343,22 +425,24 @@ classdef FM_HJS_Class < handle
         end
         
         function gendata(obj) 
-            obj.Gaussrnd = obj.Sigma*randn(obj.ino,1); 
-            Gaussrnd_pha = randn(obj.ino,1);
-            %t = linspace(0,double(obj.ino)*obj.Tsamp-obj.Tsamp,obj.ino)';
+            % Generates the modulated signal using the results from the NLS of the modulating signal
+                                    
             i = double(0:obj.ino-1)';
             
             % generate the modulating signal (a very convoluted method)
-            %Onda_Seno = (obj.Ampl_Gen_Mod/obj.Freq_Gen_Mod)*sin(2*pi*obj.Freq_Gen_Mod*i*obj.Tsamp+obj.Phi_Gen_Mod+3*Gaussrnd_pha(2));
             Onda_Seno = (obj.Ampl_Gen_Mod/obj.Freq_Gen_Mod)*sin(2*pi*obj.Freq_Gen_Mod*i*obj.Tsamp+obj.Phi_Gen_Mod);
+            if obj.modNoise, Onda_Seno = Onda_Seno + obj.phaseNoise; end
+            
             obj.data1 = sqrt(2)*obj.Ampl_Gen*cos((2*pi*obj.Freq_Gen + 2*pi*(obj.DeltaF_Gen/obj.Ampl_Gen_Mod)*obj.dc_Gen_Mod)*i*obj.Tsamp...
                                                  + obj.Phi_Gen...
-                                                 + (obj.DeltaF_Gen/obj.Ampl_Gen_Mod)*(Onda_Seno+obj.Gaussrnd))...
-                                                 + obj.Gaussrnd;
+                                                 + (obj.DeltaF_Gen/obj.Ampl_Gen_Mod)*Onda_Seno);                                             
+             if obj.sigNoise, obj.data1 = obj.data1 + obj.amplNoise; end
             
         end
         
         function Freq_BSA(obj)
+            % BSA of the modulated signal using results of the NLS of the modulated signal
+            
             startpt(1) = 2*pi*obj.Freq_Gen*obj.Tsamp;   % Carrier frequency 
             startpt(2) = obj.Phi_Gen;                   % Carrier phase
             startpt(3) = 2*pi*obj.DeltaF_Gen*obj.Tsamp; % Peak Frequency range
@@ -382,6 +466,15 @@ classdef FM_HJS_Class < handle
         end
         
         function Ampl_BSA(obj)
+            % Calculates the Amplituse and Phase of the modulated signal after Freq_BSA() has been run
+            % Generated the "best fit" modulated signal and the residual.
+            %
+            % if the modulated signal is uploaded and no modulating signal
+            % analysis is performed, the following properties must first be
+            % directly written by the calling script:
+            % obj.Mod_NLS, obj.Freq_NLS, obj.phi_NLS
+            
+            
             % preallocate vectors a and b
             nfun = (obj.ifun-1)/2;
             a = zeros((nfun+1)/2,1);
@@ -446,7 +539,8 @@ classdef FM_HJS_Class < handle
                 k = k+1;
             end
             
-%             % A convoluted method of finding the residue after finding the modulating signal but before finding the modulated signal 
+%             % A convoluted method of finding the residue after finding the modulating signal but before finding the modulated signal
+%             % (This was shown to yield the same results as siply subtracting obj.data1 from obj.Result.BSA so is replaced below)
 %             obj.Residue_BSA = obj.Modulo_BSA(1)+obj.Modulo_BSA(2)...
 %                                *cos(...
 %                                     (obj.endpt_BSA(1)...
@@ -454,8 +548,7 @@ classdef FM_HJS_Class < handle
 %                                    +((obj.endpt_BSA(3)/obj.Mod_NLS(2))*Onda_Result+obj.Phi_BSA(2)))...
 %                               - obj.data1; 
                          
-           % Now we find the modulated signal
-           
+           % Now we find the modulated signal           
            Onda_Result = Onda_Result * obj.endpt_BSA(3)/obj.Mod_NLS(2);
            Onda_Result = Onda_Result + (obj.endpt_BSA(1) +  (obj.endpt_BSA(3)/obj.Mod_NLS(2))*obj.Mod_NLS(1))*i + obj.Phi_BSA(2);
            %Onda_Result_Temp = cos(Onda_Result);     % why not calculate this in place?
@@ -476,8 +569,9 @@ classdef FM_HJS_Class < handle
     %% =========================================================================
     methods (Access = private)
                 
-        function [GIJ_NLS] = f1(obj,x_NLS)
+        function [GIJ_NLS] = f1(obj,x_NLS)                        
             % f1 (initial estimates for 4-parameter sine fit)
+            
             if x_NLS == 0, x_NLS=1e-6; end
             GIJ_NLS = zeros(obj.ino,obj.ifun);
             GIJ_NLS(:,1) = 1;       % DC
@@ -490,6 +584,8 @@ classdef FM_HJS_Class < handle
         end 
         
         function [GIJC_NLS] = f2(obj,x_NLS,bi_NLS)
+            % function to find the frequency of the modulating signal
+            % (This is basically the iterative part of a 4-parameter sine fit)
             a_NLS = zeros((obj.ifun-1)/2,1);
             b_NLS = a_NLS;
             
@@ -523,6 +619,8 @@ classdef FM_HJS_Class < handle
         end
         
         function [iters,endpt] = hooke(obj, nvars, startpt, rho, epsilon, itermax)
+            % A Hooke-Jeeves pattern search function
+            %
             [newx, xbefore] = deal(startpt);
             delta = abs(startpt * obj.rho_BSA);
             delta(delta==0) = rho;
@@ -596,6 +694,7 @@ classdef FM_HJS_Class < handle
         end
          
          function [minf,point] = best_nearby(obj, delta, point, prebest, nvars)
+             % function called by Hooke-jeeves to find the best point
              minf = prebest;
              z = point;
              for i = 1: nvars
@@ -686,6 +785,7 @@ classdef FM_HJS_Class < handle
          end
          
          function [HIJ] = ortho(obj,GIJ)
+             % Orthogonalizes the hypothesis function
              M = GIJ'*GIJ;
              M = (M+M.')/2; % The matlab eig function must recognize the matrix as symetrical
              [V,D_vector] = eig(M,'vector');         % eiganvalues and eiganvectors
@@ -697,7 +797,7 @@ classdef FM_HJS_Class < handle
              obj.invD_norm = inv(D_norm);
              A = GIJ*obj.V_norm;
              HIJ = A*obj.invD_norm; 
-             %HIJ = A\D_norm;
+             %HIJ = A\D_norm;         % may not need to calculate the inverse of D_norm, needs to be tested
          end                                            
         
          
@@ -709,6 +809,7 @@ classdef FM_HJS_Class < handle
    
     % Static Methods
     methods(Static)
+        % gets the parameter values contained in SignalParams
         function [varargout] = getParamVals(signalparams)
             varargout = cell(nargout,1);
             for i = 1:nargout
@@ -717,6 +818,7 @@ classdef FM_HJS_Class < handle
         end
             
         function [varargout] = getParamIndex()
+            % gets the indexes into SignalParams to later set or get the values
             varargout = cell(nargout,1);
             for i = 1:nargout
                 varargout{i}=i;
@@ -724,10 +826,23 @@ classdef FM_HJS_Class < handle
         end
                 
         function [S] = ampli_est(G,samples)
-            % Linear least-squares
+            % Linear least-squares function using MATLAB mldivide operator
              S = (G'*G)\(G'*samples);  
-         end
+        end
         
+        function [noise] = genNoise(NoiseParams,length)
+           % Generates random noise based on the structure elements.  Generally either uniform
+           % or Gaussian noise will be generated by setting some parameters to 0, but they can be combiled
+           %
+           % NoiseParams.NoiseUniformHi - NoiseParams.NoiseUniformLow is a range of uniform noise
+           % NoiseParams.NoiseGaussSD is the standard deviation for Gaussian Noise
+           % NoiseParams.NoiseGaussMean offsets the noise
+           
+           noise = zeros(length,1);
+           noise = noise + (NoiseParams.NoiseUniformHi - NoiseParams.NoiseUniformLow)*randn(length,1);
+           noise = noise + NoiseParams.NoiseGaussSD*randn(length,1);
+           noise = noise + NoiseParams.NoiseGaussMean;
+        end
  
     end
     %% =========================================================================

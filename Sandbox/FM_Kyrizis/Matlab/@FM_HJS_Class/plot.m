@@ -1,6 +1,9 @@
 function plot(obj, varargin)
 %PLOT functions for the Hook_Jeeves_Student3 class
-%   Detailed explanation goes here
+%  Examples: 
+%       HJS.plot('NLS') % plots modulating signal NLS analysis results
+%       HJS.plot('BSA') % plots modulated signal BSA analysis results
+%       HJS.plot('NLS','BSA') % plots both analysis results in separate figures
 
 i = 1;
 while i<= numel(varargin)
@@ -26,7 +29,7 @@ while i<= numel(varargin)
             figure(obj.fig); obj.fig = obj.fig+1;
             t=1:length(obj.data);            
             subplot(2,1,1)
-            plot(t,obj.data1,'.b',t,obj.Result_BSA,'.r')
+            plot(t,obj.data1,'-b',t,obj.Result_BSA,'-r')
             title('BSA Result')
             xlabel('Samples')
             ylabel('Amplitude')
