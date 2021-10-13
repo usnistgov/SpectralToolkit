@@ -9,7 +9,8 @@ i = 1;
 while i<= numel(varargin)
     switch varargin{i}
         case 'NLS'
-            figure(obj.fig); obj.fig = obj.fig+1;
+            f = figure(obj.fig); obj.fig = obj.fig+1;
+            f.Name = sprintf('%s_NLS',obj.Name);
             subplot(2,1,1)
             t=1:length(obj.data);
             plot(t,obj.data,'-b',t,obj.Result_NLS,'-r')
@@ -26,7 +27,8 @@ while i<= numel(varargin)
             xlabel('Samples')
             
         case('BSA')
-            figure(obj.fig); obj.fig = obj.fig+1;
+             f = figure(obj.fig); obj.fig = obj.fig+1;
+            f.Name = sprintf('%s_BSA',obj.Name);
             t=1:length(obj.data);            
             subplot(2,1,1)
             plot(t,obj.data1,'-b',t,obj.Result_BSA,'-r')

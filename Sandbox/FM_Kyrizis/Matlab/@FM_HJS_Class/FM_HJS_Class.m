@@ -93,6 +93,7 @@ classdef FM_HJS_Class < handle
        Freq_Gen_Mod     % Normally set by SignalParams, but can be overwritten after obj.configure() runs
        Phi_Gen_Mod      % Defaults to 0 but can be overwritten after obj.configure() runs
        dc_Gen_Mod       % Defaults to 0 but can be overwritten after obj.configure() runs
+       THD_NLS
        
        % Modulated Signal parameters
        Ampl_Gen
@@ -100,10 +101,16 @@ classdef FM_HJS_Class < handle
        Phi_Gen
        dc_Gen
        DeltaF_Gen       % peak frequency deviation
+       SSE_BSA       % Sum of Squared Errors of the BSA
+       R_Sq_BSA      % Coefficient of determination
                         
+       
+       
                         
-        Name                       
+        Name            % Name of the class instance           
         verbose         % logical to show status messages if "true"
+        fig = 1         % keeps t4rack of plot figure numbers
+
         
     end
     
@@ -119,8 +126,7 @@ classdef FM_HJS_Class < handle
        Freq_NLS
        Mod_NLS
        phi_NLS 
-       Result_NLS
-       THD_NLS
+       Result_NLS       
        Residue_NLS
        iterMax_NLS
        epsilon_NLS
@@ -149,7 +155,6 @@ classdef FM_HJS_Class < handle
        invD_norm
        hi
 
-       fig = 1
              
    end   
 
@@ -264,8 +269,8 @@ classdef FM_HJS_Class < handle
             obj.amplNoise = obj.genNoise(obj.AmplNoiseParams,obj.ino);
             
             % Modualting Signal
-            obj.Ampl_Gen_Mod = 1;
-            %obj.Ampl_Gen_Mod = Ka;         % why is the ampl not the index?
+            %obj.Ampl_Gen_Mod = 1;
+            obj.Ampl_Gen_Mod = Ka;         % why is the ampl not the index?
             obj.Freq_Gen_Mod = Fa;
             obj.dc_Gen_Mod = 0;             % the modulating signal DC offset is not configurable in SignalParams but may be changed here
             obj.Phi_Gen_Mod = 0;            % the modulating signal initial phase is not configurable in SignalParams but may be changed here
@@ -560,6 +565,10 @@ classdef FM_HJS_Class < handle
            
            % A simpler ,ethod of findint the residue
            obj.Residue_BSA = obj.Result_BSA - obj.data1;
+           
+           % some goodness of fit parameters
+           obj.SSE_BSA = sum(obj.Residue_BSA.^2);
+           obj.R_Sq_BSA = 1 - sum((obj.data1 - obj.Result_BSA).^2)/sum((obj.data1 - mean(obj.data1)).^2);
            
            
         end
