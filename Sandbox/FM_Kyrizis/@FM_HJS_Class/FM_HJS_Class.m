@@ -36,8 +36,26 @@ classdef FM_HJS_Class < handle
         
         data            % The modulating signal.  Can be input using the 
                         % GenModData constructor argument.  If not, then a simulated
-                        % signal will be generated during configure.  This may also be overwritten later
+                        % signal will be generated during obj.configure().  This may also be overwritten later.
+                        
+        data1           % The modulated signal.  Can be input using the GenData constructor argument.
+                        % if not, then a simulated signal will be generated during obj.configure().  This may be overwritten later.
  
+       % Modulating Signal properties 
+       Ampl_Gen_Mod     % Normally set by SignalParams, but can be overwritten after obj.configure() runs
+       Freq_Gen_Mod     % Normally set by SignalParams, but can be overwritten after obj.configure() runs
+       Phi_Gen_Mod      % Defaults to 0 but can be overwritten after obj.configure() runs
+       dc_Gen_Mod       % Defaults to 0 but can be overwritten after obj.configure() runs
+       
+       % Modulated Signal properties
+       Ampl_Gen
+       Freq_Gen
+       Phi_Gen
+       dc_Gen
+       DeltaF_Gen       % peak frequency deviation
+                        
+                        
+                        
         verbose         % boolean to show status messages
         
     end
@@ -46,28 +64,44 @@ classdef FM_HJS_Class < handle
        x_NLS
        Tsamp    % sample period
        ino
-       ifun     % number of harmonics to fit
-       data1
+       ifun     % number of harmonics to fit       
        Gaussrnd
-       residue
-       
-       % Modulating Signal properties
-       Ampl_Gen_Mod
-       Freq_Gen_Mod
        
        % NLS of the modulating signal
        Freq_NLS
        Mod_NLS
        phi_NLS 
        Result_NLS
-       THD
+       THD_NLS
        Residue_NLS
        iterMax_NLS
        epsilon_NLS
-       rho_NLS
-       
+       rho_NLS       
        end_bi_NLS
+       
+       % BSA of the modulated signal
+       iterMax_BSA
+       epsilon_BSA
+       rho_BSA
+       endpt_BSA    % the omega result for the BSA
+       funevals
+       sigma
+       % stloge
+       Phi_BSA
+       Modulo_BSA
+       Result_BSA
+       Residue_BSA
+       %zloge        % I do not know what this does, it is always = 0
+       %st           % this value never changes either
+       %nst
+       %phat         % phat was calculated but never used
+       
+       % BSA model properties
+       V_norm           % normalized eiganvector of the model
+       invD_norm
+       hi
 
+       fig = 1
              
    end
    
@@ -95,12 +129,13 @@ classdef FM_HJS_Class < handle
     methods
         function obj = FM_HJS_Class(varargin)
             defaultName = 'default FM_HJS';
-            defaultSignalParams = [1,50,0,0,0,0,5,5,0,0,0,0,0,0,0]';
+            defaultSignalParams = [1,49.9876543210,0,0,0,0,4.9876543210,5,0,0,0,0,0,0,0]';
             defaultSampleRate = 1/.00006520;  % samples per second
             defaultDuration = 8000/defaultSampleRate;
             defaultSigma = 0.000001;
             defaultNumHarm = 3;
             defaultGenModData = [];
+            defaultGenData = [];
             defaultVerbose = true;
             
             p = inputParser;
@@ -117,6 +152,7 @@ classdef FM_HJS_Class < handle
             addParameter(p,'Sigma',defaultSigma,validScalar);
             addParameter(p,'NumHarm',defaultNumHarm,validScalarPosNum)
             addParameter(p,'GenModData',defaultGenModData);
+            addParameter(p,'GenData',defaultGenData);            
             addParameter(p,'Verbose',defaultVerbose,validBool);
             
             parse(p,varargin{:})
@@ -128,6 +164,7 @@ classdef FM_HJS_Class < handle
             obj.Sigma = p.Results.Sigma;
             obj.NumHarm = p.Results.NumHarm;
             obj.data = p.Results.GenModData;
+            obj.data1 = p.Results.GenData;
             obj.verbose = p.Results.Verbose;
             
             % set up some global variables
@@ -138,21 +175,44 @@ classdef FM_HJS_Class < handle
     end
     
     %% =========================================================================
+    % Public Methods in external files
+    methods (Access = public)
+        plot(obj, varargin)
+    end
+
+    %% =========================================================================
     % Public Methods
     methods (Access = public)
         function configure(obj)   
             obj.Tsamp = 1/obj.SampleRate;
             obj.ifun = 2*obj.NumHarm+1;
-            [~,~,~,~,~,~,Fa,Ka] = obj.getParamVals(obj.SignalParams);
+            [Xm,Fin,Ps,~,~,~,Fa,Ka] = obj.getParamVals(obj.SignalParams);
+            
+            % Modualting Signal
             obj.Ampl_Gen_Mod = 1;
             %obj.Ampl_Gen_Mod = Ka;         % why is the ampl not the index?
             obj.Freq_Gen_Mod = Fa;
-                       
+            obj.dc_Gen_Mod = 0;             % the modulating signal DC offset is not configurable in SignalParams but may be changed here
+            obj.Phi_Gen_Mod = 0;            % the modulating signal initial phase is not configurable in SignalParams but may be changed here
             if isempty(obj.data),obj.genwave();end  
             
             obj.iterMax_NLS = 40;
             obj.epsilon_NLS = 1e-8;
             obj.rho_NLS = 1;
+            
+            % Modulated Signal
+            obj.Ampl_Gen = Xm;
+            obj.Freq_Gen = Fin;
+            obj.Phi_Gen = Ps;
+            obj.dc_Gen = 0;
+            obj.DeltaF_Gen = Ka*Fa;         % peak frequency deviation = Index * Fmod
+            if isempty(obj.data1),obj.gendata();end
+            
+            % BSA
+            obj.iterMax_BSA = 5000;
+            obj.epsilon_BSA = 1e-8;
+            obj.rho_BSA = 0.85;            
+            
         end
                 
         function genwave(obj)
@@ -171,7 +231,9 @@ classdef FM_HJS_Class < handle
             startpt_NLS = 2*pi*obj.Freq_Gen_Mod*obj.Tsamp;
             omega2 = startpt_NLS;
             GIJ_NLS = obj.f1(omega2);
-            new_bi(2:end) = obj.ampli_est(GIJ_NLS,obj.data);
+            newbi = obj.ampli_est(GIJ_NLS,obj.data);
+            new_bi(1)=0;
+            new_bi(2:end) = newbi;
             
             % fitting to the modulation frequency (this is a typical 4-parameter sine fit)
             iters = 0;
@@ -180,12 +242,17 @@ classdef FM_HJS_Class < handle
                 GIJC_NLS = obj.f2(omega2,new_bi);
                 end_bi = obj.ampli_est(GIJC_NLS,obj.data);
                 omega2 = omega2 + obj.rho_NLS*end_bi(1);
-                new_bi(1)=end_bi(1);
                 GIJ_NLS = obj.f1(omega2);
-                new_bi(2:end) = obj.ampli_est(GIJ_NLS,obj.data);
+                newbi = obj.ampli_est(GIJ_NLS,obj.data);
+                new_bi(1)=end_bi(1);
+                new_bi(2:end)=newbi;
                 iters = iters+1;
                 stepLength_NLS = abs(end_bi(1));
             end
+            if iters == obj.iterMax_NLS
+                warning('mod_Freq_NLS did not converge after %d iterations',iters)
+            end
+            
             obj.end_bi_NLS=new_bi;
             
             obj.Freq_NLS = omega2;
@@ -243,9 +310,9 @@ classdef FM_HJS_Class < handle
             
             Acrms_NLS = sqrt(Acrms_NLS);
             if Acrms_NLS^2 > Mod_Fundamental_NLS^2
-                obj.THD = 100*sqrt(Acrms_NLS^2-Mod_Fundamental_NLS^2)/Mod_Fundamental_NLS; % THD in %
+                obj.THD_NLS = 100*sqrt(Acrms_NLS^2-Mod_Fundamental_NLS^2)/Mod_Fundamental_NLS; % THD in %
             else
-                obj.THD = 0;
+                obj.THD_NLS = 0;
             end
             
 
@@ -254,8 +321,156 @@ classdef FM_HJS_Class < handle
             for j=1:(obj.ifun-1)/2
                 obj.Result_NLS = obj.Result_NLS + obj.Mod_NLS(j+1)*cos(j*obj.Freq_NLS*i+obj.phi_NLS(j+1));
             end
+            obj.Residue_NLS = obj.Result_NLS-obj.data;
+            % if verbose is true, display amplitudes, phases 
+            if obj.verbose
+                nfun = (obj.ifun-1)/2;
+                fList = '';
+                for i=1:nfun+1
+                    fItem = sprintf('%d: %f \n',i-1,Mod_corr_NLS(i));
+                    fList = sprintf('%s %s',fList,fItem);
+                end
+                fprintf('NLS Amplitudes:\n%s',fList);
+                
+                fList = '';
+                for i=1:nfun+1
+                    fItem = sprintf('%d: %f \n',i-1,phi_corr_NLS(i));
+                    fList = sprintf('%s %s',fList,fItem);
+                end
+                fprintf('NLS Phases (rad/unit):\n%s',fList);
+                
+            end
         end
         
+        function gendata(obj) 
+            obj.Gaussrnd = obj.Sigma*randn(obj.ino,1); 
+            Gaussrnd_pha = randn(obj.ino,1);
+            %t = linspace(0,double(obj.ino)*obj.Tsamp-obj.Tsamp,obj.ino)';
+            i = double(0:obj.ino-1)';
+            
+            % generate the modulating signal (a very convoluted method)
+            %Onda_Seno = (obj.Ampl_Gen_Mod/obj.Freq_Gen_Mod)*sin(2*pi*obj.Freq_Gen_Mod*i*obj.Tsamp+obj.Phi_Gen_Mod+3*Gaussrnd_pha(2));
+            Onda_Seno = (obj.Ampl_Gen_Mod/obj.Freq_Gen_Mod)*sin(2*pi*obj.Freq_Gen_Mod*i*obj.Tsamp+obj.Phi_Gen_Mod);
+            obj.data1 = sqrt(2)*obj.Ampl_Gen*cos((2*pi*obj.Freq_Gen + 2*pi*(obj.DeltaF_Gen/obj.Ampl_Gen_Mod)*obj.dc_Gen_Mod)*i*obj.Tsamp...
+                                                 + obj.Phi_Gen...
+                                                 + (obj.DeltaF_Gen/obj.Ampl_Gen_Mod)*(Onda_Seno+obj.Gaussrnd))...
+                                                 + obj.Gaussrnd;
+            
+        end
+        
+        function Freq_BSA(obj)
+            startpt(1) = 2*pi*obj.Freq_Gen*obj.Tsamp;   % Carrier frequency 
+            startpt(2) = obj.Phi_Gen;                   % Carrier phase
+            startpt(3) = 2*pi*obj.DeltaF_Gen*obj.Tsamp; % Peak Frequency range
+            nvars = length(startpt);
+            obj.funevals = 0;
+            [iters,obj.endpt_BSA] = obj.hooke(nvars,startpt, obj.rho_BSA, obj.epsilon_BSA, obj.iterMax_BSA);
+            % omega = obj.endpt_BSA;  % omega is an overloaded term (used too much to be clear), so store the property endpoint_BSA
+            
+            % diaplay the result
+            if obj.verbose
+                fprintf('\n==========\nTotal iterations: %d\n',iters)
+                nfun = (obj.ifun-1)/2;
+                fList = '';
+                for k = 1:nfun
+                    fItem = sprintf('%d: %f \n',k,obj.endpt_BSA(k));
+                    fList = sprintf('%s %s',fList,fItem);
+                end
+                fprintf('BSA Frequencies (rad/unit):\n%s',fList);
+            end
+            
+        end
+        
+        function Ampl_BSA(obj)
+            % preallocate vectors a and b
+            nfun = (obj.ifun-1)/2;
+            a = zeros((nfun+1)/2,1);
+            b = zeros((nfun+1)/2,1);
+            
+            B = obj.V_norm*obj.invD_norm;
+            bi = B*obj.hi;
+            a(1) = bi(1);
+            %b(1) = 0;   % not needed due to preallocation  
+            k = 2;
+            while k <= nfun
+                if k < (nfun+1)/2+1
+                    a(k) = bi(k);
+                else
+                    b(k-(nfun-1)/2) = bi(k); 
+                end
+                k = k+1;
+            end  
+            cBSA = complex(a,b);        % complex
+            obj.Modulo_BSA = abs(cBSA);
+            obj.Phi_BSA = angle(cBSA);
+            
+            %a_corr = zeros((nfun+1)/2,1);    % preallocation not needed
+            %b_corr = zeros((nfun+1)/2,1);
+            % Modulo_corr = zeros((nfun+1)/2,1)
+            %Phi_corr = zeros((nfun+1)/2,1);
+            Acrms = 0;
+            a = a/sqrt(2);
+            b = b/sqrt(2);
+            a_corr = a.*cos(obj.Phi_BSA)+b.*sin(obj.Phi_BSA);
+            b_corr = b.*cos(obj.Phi_BSA)-a.*sin(obj.Phi_BSA);
+            cCorr = complex(a_corr,b_corr);
+            Acrms = Acrms + sum(abs(cCorr));
+            Mod_Fundamental = abs(cCorr(2));
+            
+            if obj.verbose
+                %Modulo_corr(1)=100*obj.Modulo_BSA(1)/Mod_Fundamental;
+                %Modulo_corr(2)=100*abs(cCorr(2:end)/Mod_Fundamental);
+                Modulo_corr = 100*abs(cCorr)/Mod_Fundamental;
+                Phi_corr = angle(cCorr)*180/pi;
+                fList = '';
+                for k = 1:nfun-1
+                    fItem = sprintf('%d: %f \n',k,Modulo_corr(k));
+                    fList = sprintf('%s %s',fList,fItem);                    
+                end
+                fprintf('BSA Amplitudes:\n%s',fList);
+                fList = '';
+               for k = 1:nfun-1
+                    fItem = sprintf('%d: %f \n',k,Phi_corr(k));
+                    fList = sprintf('%s %s',fList,fItem);                    
+                end
+                fprintf('BSA Phases (deg):\n%s',fList);
+                
+            end
+            
+            % Modulating signal
+            Onda_Result = zeros(obj.ino,1);
+            i = (0:double(obj.ino)-1)';
+            k = 1;
+            while k < (obj.ifun+1)/2
+                Onda_Result = Onda_Result + (obj.Mod_NLS(k+1)/(k*obj.Freq_NLS))*sin(k*((obj.Freq_NLS*i)+obj.endpt_BSA(2))+obj.phi_NLS(k+1));
+                k = k+1;
+            end
+            
+%             % A convoluted method of finding the residue after finding the modulating signal but before finding the modulated signal 
+%             obj.Residue_BSA = obj.Modulo_BSA(1)+obj.Modulo_BSA(2)...
+%                                *cos(...
+%                                     (obj.endpt_BSA(1)...
+%                                      +(obj.endpt_BSA(3)/obj.Mod_NLS(2))*obj.Mod_NLS(1))*i...
+%                                    +((obj.endpt_BSA(3)/obj.Mod_NLS(2))*Onda_Result+obj.Phi_BSA(2)))...
+%                               - obj.data1; 
+                         
+           % Now we find the modulated signal
+           
+           Onda_Result = Onda_Result * obj.endpt_BSA(3)/obj.Mod_NLS(2);
+           Onda_Result = Onda_Result + (obj.endpt_BSA(1) +  (obj.endpt_BSA(3)/obj.Mod_NLS(2))*obj.Mod_NLS(1))*i + obj.Phi_BSA(2);
+           %Onda_Result_Temp = cos(Onda_Result);     % why not calculate this in place?
+           %Onda_Result = Onda_Result_Temp;          % not needed, just calculate in place!
+           Onda_Result = cos(Onda_Result);      % The above, only calculated in place
+           Onda_Result = Onda_Result * obj.Modulo_BSA(2);   % first harmonic amplitude 
+           Onda_Result = Onda_Result + obj.Modulo_BSA(1);   % DC offset
+           obj.Result_BSA = Onda_Result;       
+           
+           % A simpler ,ethod of findint the residue
+           obj.Residue_BSA = obj.Result_BSA - obj.data1;
+           
+           
+        end
+                   
     end
     
     %% =========================================================================
@@ -279,15 +494,15 @@ classdef FM_HJS_Class < handle
             b_NLS = a_NLS;
             
             if x_NLS == 0, x_NLS=1e-6; end
-            a_NLS(1) = bi_NLS(2);
+            a_NLS(1) = bi_NLS(2);       % DC
             b_NLS(1) = 0;
             
             k = 2;
             while (k<obj.ifun)
                 if (k<(obj.ifun+1)/2)
-                    a_NLS(k)=bi_NLS(k+1);
+                    a_NLS(k)=bi_NLS(k+1);  % cosines
                 else
-                    b_NLS(k-(obj.ifun-1)/2)=bi_NLS(k+1);
+                    b_NLS(k-(obj.ifun-1)/2)=bi_NLS(k+1);  % sines
                 end
                 k=k+1;
             end
@@ -298,17 +513,195 @@ classdef FM_HJS_Class < handle
             i = double(0:obj.ino-1); 
             nfun = (obj.ifun-1)/2;            
             for j = 1:nfun
-                GIJC_NLS(:,1)= GIJC_NLS(:,1) + (-a_NLS(j)*i.*sin(j*x_NLS*i)...
-                               + b_NLS(j)*i.*cos(j*x_NLS*i))';
+                GIJC_NLS(:,1)= GIJC_NLS(:,1) + (-a_NLS(j)*j*i.*sin(j*x_NLS*i)...
+                               + b_NLS(j)*j*i.*cos(j*x_NLS*i))';
             end
             for j = 2:nfun+1
                 GIJC_NLS(:,j+1)=cos((j-1)*x_NLS*i);
                 GIJC_NLS(:,nfun+j+1) = sin((j-1)*x_NLS*i);
-            end
-                
-                
+            end                
         end
         
+        function [iters,endpt] = hooke(obj, nvars, startpt, rho, epsilon, itermax)
+            [newx, xbefore] = deal(startpt);
+            delta = abs(startpt * obj.rho_BSA);
+            delta(delta==0) = rho;
+            iadj = 0;
+            steplength = rho;
+            iters = 0;
+            [fbefore] = obj.f(newx);      % first call to the objective function
+            % newf = fbefore;             % newf will be changed by best_nearby
+            while ((iters < itermax) && (steplength > epsilon))
+                iters = iters+1;
+                iadj = iadj+1;
+                for i=1:nvars
+                    if obj.verbose
+                        %fprintf("\nAfter %5d funevals, f(x) = %1.4e at\n",obj.funevals,fbefore);
+                        fList = '';
+                        for k = 1:nvars
+                            fItem = sprintf('%d: %f \n',k,xbefore(k));
+                            fList = sprintf('%s %s',fList,fItem);                            
+                        end
+                        fprintf("\nAfter %d funevals, f(x)=%1.4e at\n%s",obj.funevals,fbefore,fList);
+                        
+                    end
+                    % find the best new point, one coordinate at a time
+                    newx = xbefore;
+                    [newf, newx] = obj.best_nearby(delta, newx, fbefore, nvars);
+                    % if we made an improvement, persue that direction
+                    keep = 1;
+                    while newf < fbefore && keep == 1
+                        iadj = 0;
+                        for i = 1 : nvars
+                            % determine the (sign) direction of detla
+                            if newx(i) <= xbefore(i)
+                                delta(i) = 0 - abs(delta(i));
+                            else
+                                delta(i) = abs(delta(i));
+                            end
+                            % move in this direction
+                            tmp = xbefore(i);
+                            xbefore(i) = newx(i);
+                            newx(i) = newx(i)*2-tmp;
+                        end
+                        fbefore = newf;
+                        [newf, newx] = obj.best_nearby(delta, newx, fbefore, nvars);
+                        % if we got worse, end the search (may be able to
+                        % later check for local minima with trial
+                        % checks in both directions, this of course would take time)
+                        if newf >= fbefore
+                            break
+                        end
+                        % make sure that the differences between the new
+                        % and old points are due to actual displacements;
+                        % bewre of roundoff errors that might cause newf <
+                        % fbefore
+                        keep = 0;
+                        for i = 1 : nvars
+                            keep = 1;
+                            if abs(newx(i) - xbefore(i)) > 0.5 * abs(delta(i))
+                                break
+                            else
+                                keep = 0;
+                            end
+                        end
+                    end
+                    if steplength >= epsilon && newf >= fbefore
+                        steplength = steplength * rho;
+                        delta = delta * rho;
+                    end
+                end
+            end
+            endpt = xbefore;
+        end
+         
+         function [minf,point] = best_nearby(obj, delta, point, prebest, nvars)
+             minf = prebest;
+             z = point;
+             for i = 1: nvars
+                z(i) = point(i) + delta(i);
+                ftmp = obj.f(z);
+                if ftmp < minf
+                    minf = ftmp;
+                else
+                    delta(i) = 0 - delta(i);
+                    z(i) = point(i) + delta(i);
+                    ftmp = obj.f(z);
+                    if ftmp < minf
+                       minf = ftmp;
+                    else
+                        z(i) = point(i);
+                    end
+                end
+             end
+             point = z;
+         end
+         
+         
+                  
+         function [y] =f(obj,x)
+             obj.funevals = obj.funevals+1;
+             omega = x;
+             % obj.zloge = 0;        % Commented out because it never changes
+             % nfun = (obj.ifun+1)/2;
+             Onda = zeros(obj.ino,1);
+             i = double(0:obj.ino-1)';
+             
+             % set GIJ
+             k=1;
+             while k<(obj.ifun+1)/2
+                Onda = Onda + (obj.Mod_NLS(k+1)/(k*obj.Freq_NLS))*sin(k*(obj.Freq_NLS*i+omega(2))+obj.phi_NLS(k+1));
+                k = k+1;
+             end
+             GIJ = zeros(obj.ino,3);
+             GIJ(:,1) = 1;      % DC
+             GIJ(:,2) = cos((omega(1)+(omega(3)/obj.Mod_NLS(2))*obj.Mod_NLS(1))*i...
+                            +(omega(3)/obj.Mod_NLS(2))*Onda);   
+             GIJ(:,3) = sin((omega(1)+(omega(3)/obj.Mod_NLS(2))*obj.Mod_NLS(1))*i...
+                            +(omega(3)/obj.Mod_NLS(2)).*Onda); 
+             stloge = obj.prob(GIJ);
+             y = -stloge;
+             %obj.nst = -obj.st;    % Commented out because it does nothng
+                                   
+         end
+         
+         function stloge = prob(obj,GIJ)
+            iNo = double(obj.ino);      % makes the below more readable
+            HIJ = obj.ortho(GIJ);
+             nfun = size(HIJ,2);
+             obj.hi = zeros(nfun,1);
+             h2=0;
+             for j=1:nfun
+                 h1 = sum(obj.data1.*HIJ(:,j));
+                 obj.hi(j)=h1;
+                 %h2 = h2 + h1.*h1;
+             end
+             h2 = sum(obj.hi.^2);
+             h2bar = h2/nfun;
+             
+             y2 = sum(obj.data1.^2);
+             y2bar = y2/iNo;
+             
+             qq = 1-h2/y2;
+             if qq<=0
+                qq = 1e-16; 
+             end
+
+             stloge = log(qq)*(nfun-iNo)/2;
+             dif = y2bar-nfun*h2bar/iNo;
+             obj.sigma = sqrt(abs(dif)*iNo/(iNo-nfun-2));
+
+% The commented code below does nothing because obj.zloge is always 0             
+%             ahold = stloge-obj.zloge;
+             
+             % this code is useless, obj.zloge is always 0
+%              if obj.zloge == 0
+%                  obj.st = 0;
+%              else
+%                  obj.st = exp(ahold);
+%              end
+             
+%             obj.phat = nfun*(obj.sigma*obj.sigma+h2bar)*obj.st;
+             
+         end
+         
+         function [HIJ] = ortho(obj,GIJ)
+             M = GIJ'*GIJ;
+             M = (M+M.')/2; % The matlab eig function must recognize the matrix as symetrical
+             [V,D_vector] = eig(M,'vector');         % eiganvalues and eiganvectors
+             SqrSumCol = sum(V.^2);
+             norm = sqrt(SqrSumCol);
+             obj.V_norm = V./norm;
+             D_vec = sqrt(abs(D_vector));
+             D_norm = diag(D_vec);
+             obj.invD_norm = inv(D_norm);
+             A = GIJ*obj.V_norm;
+             HIJ = A*obj.invD_norm; 
+             %HIJ = A\D_norm;
+         end                                            
+        
+         
+         
     end
     
     
@@ -332,11 +725,12 @@ classdef FM_HJS_Class < handle
                 
         function [S] = ampli_est(G,samples)
             % Linear least-squares
-            S = (G'*G)\(G'*samples);            
-        end
-
+             S = (G'*G)\(G'*samples);  
+         end
+        
+ 
     end
     %% =========================================================================
     
     
-    end
+end
