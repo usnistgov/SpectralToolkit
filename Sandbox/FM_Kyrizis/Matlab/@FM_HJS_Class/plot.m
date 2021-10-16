@@ -43,6 +43,34 @@ while i<= numel(varargin)
             xlabel('Samples')
             ylabel('Amplitude')                             
         
+         case('hookeContour')             
+             x = cell2mat(obj.hookeContour(:,1));
+             fx = cell2mat(obj.hookeContour(:,2));
+             f = figure(obj.fig); obj.fig = obj.fig+1;
+             plot(x,fx,'.k')
+             w0 = cell2mat(obj.hookeContour(:,3));
+             ka = cell2mat(obj.hookeContour(:,4));
+             phi = cell2mat(obj.hookeContour(:,5));
+             
+             f = figure(obj.fig); obj.fig = obj.fig+1;
+             subplot(3,1,1)
+             plot(x,w0,'.k')
+             %ylim([.0204,.0206])
+             title('omega(0)')
+            
+             subplot(3,1,2)
+             plot(x,ka,'.k')
+             %ylim([1.568,1.574])
+             title('omega(1)')
+              
+             subplot(3,1,3)
+             plot(x,phi,'.k')
+             %ylim([0.008,0.012])
+             title('omega(2)')
+             
+             %plot3(w0-mean(w0),ka-mean(ka),phi-mean(phi))
+             
+             
         otherwise
             warning('unrecognized plot argument: %s',varargin{i})
     end

@@ -103,14 +103,18 @@ classdef FM_HJS_Class < handle
        DeltaF_Gen       % peak frequency deviation
        SSE_BSA       % Sum of Squared Errors of the BSA
        R_Sq_BSA      % Coefficient of determination
-                        
+       funevals
        
        
                         
         Name            % Name of the class instance           
         verbose         % logical to show status messages if "true"
         fig = 1         % keeps t4rack of plot figure numbers
-
+        
+        %Debugging properties
+        debug           % logical true if in debugging mode
+        hookeContour = {} % cell array, columns: funevals;w0;ka;phi
+        
         
     end
     
@@ -137,8 +141,7 @@ classdef FM_HJS_Class < handle
        iterMax_BSA
        epsilon_BSA
        rho_BSA
-       endpt_BSA    % the omega result for the BSA
-       funevals
+       endpt_BSA    % the omega result for the BSA       
        sigma
        % stloge
        Phi_BSA
@@ -291,8 +294,9 @@ classdef FM_HJS_Class < handle
             % BSA
             obj.iterMax_BSA = 5000;
             obj.epsilon_BSA = 1e-8;
-            obj.rho_BSA = 0.85;  
-            
+            %obj.rho_BSA = 0.85;              
+            %obj.rho_BSA = [0.975,0.85,0.95];  
+            obj.rho_BSA = [0.85,0.85,0.85];
             
         end
                 
@@ -631,30 +635,45 @@ classdef FM_HJS_Class < handle
             % A Hooke-Jeeves pattern search function
             %
             [newx, xbefore] = deal(startpt);
-            delta = abs(startpt * obj.rho_BSA);
-            delta(delta==0) = rho;
+            delta = abs(startpt .* rho);
+            % replace any 0's with rho
+            %delta(delta==0) = rho;
+            idx = find(delta==0);       % experiment to use a array of rho values
+            delta(idx)=rho(idx);
+            
             iadj = 0;
-            steplength = rho;
+            %steplength;
+            steplength = rho(2);
+            newf = 0;
             iters = 0;
             [fbefore] = obj.f(newx);      % first call to the objective function
-            % newf = fbefore;             % newf will be changed by best_nearby
+            newf = fbefore;               % newf will be changed by best_nearby
             while ((iters < itermax) && (steplength > epsilon))
                 iters = iters+1;
                 iadj = iadj+1;
+               
+                % print the intermediate values
                 for i=1:nvars
                     if obj.verbose
-                        %fprintf("\nAfter %5d funevals, f(x) = %1.4e at\n",obj.funevals,fbefore);
                         fList = '';
                         for k = 1:nvars
                             fItem = sprintf('%d: %f \n',k,xbefore(k));
                             fList = sprintf('%s %s',fList,fItem);                            
                         end
-                        fprintf("\nAfter %d funevals, f(x)=%1.4e at\n%s",obj.funevals,fbefore,fList);
-                        
+                        fprintf("\nAfter %d funevals, f(x)=%1.4e at\n%s",obj.funevals,fbefore,fList);  
+                        %fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )                      
                     end
+                    
+                    % save the intermediate values for later plotting
+                    if obj.debug
+                        element = num2cell(horzcat(obj.funevals,fbefore,xbefore));
+                        obj.hookeContour=[obj.hookeContour;element];                        
+                    end
+                    
                     % find the best new point, one coordinate at a time
                     newx = xbefore;
                     [newf, newx] = obj.best_nearby(delta, newx, fbefore, nvars);
+                    
                     % if we made an improvement, persue that direction
                     keep = 1;
                     while newf < fbefore && keep == 1
@@ -693,11 +712,14 @@ classdef FM_HJS_Class < handle
                             end
                         end
                     end
-                    if steplength >= epsilon && newf >= fbefore
-                        steplength = steplength * rho;
-                        delta = delta * rho;
-                    end
-                end
+                     if steplength >= epsilon && newf >= fbefore
+                         steplength = steplength * rho(2);
+                         %steplength = abs(newf-fbefore);
+                         delta = delta .* rho;
+                     end
+
+                 end
+                 fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )
             end
             endpt = xbefore;
         end
