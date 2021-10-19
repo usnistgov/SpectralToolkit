@@ -69,16 +69,16 @@ classdef HJS_Experiments < matlab.unittest.TestCase
             % 50f0_5Fa0_3Ka1 with no additive noise
            %obj.HJS.fig = 1;             % reset the figure number 
            obj.HJS.hookeContour = {}; % clear the contour from last run
+           obj.HJS.verbose = true;
            obj.HJS.debug = true;      % set the debug mode
            obj.HJS.AmplNoiseParams.NoiseGaussSD = 0;    % remove amplitude noise
            obj.HJS.PhaseNoiseParams.NoiseGaussSD = 0;   % remove phase noise
            
            [~,~,~,~,~,~,~,Ka] = obj.HJS.getParamIndex();
-           k = 4.1;
-           %k = 5.0;
+           %k = 4.1;
+           k = 5.0;
            obj.HJS.SignalParams(Ka) = k;
            obj.HJS.Name = sprintf('50F0_5Fa0_%dKa%i',fix(k),round(abs(fix(k)-k)*10));
-           obj.HJS.verbose = true;
            obj.runOne()
            obj.HJS.plot('BSA')           
            obj.HJS.plot('hookeContour');

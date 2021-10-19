@@ -634,6 +634,10 @@ classdef FM_HJS_Class < handle
         function [iters,endpt] = hooke(obj, nvars, startpt, rho, epsilon, itermax)
             % A Hooke-Jeeves pattern search function
             %
+            if obj.debug
+                fprintf('iteration\tfunc-count\tmin-f\n')
+            end
+            %
             [newx, xbefore] = deal(startpt);
             delta = abs(startpt .* rho);
             % replace any 0's with rho
@@ -651,6 +655,11 @@ classdef FM_HJS_Class < handle
             while ((iters < itermax) && (steplength > epsilon))
                 iters = iters+1;
                 iadj = iadj+1;
+                
+                if obj.debug
+                    fprintf('\t%d\t\t\t%d\t\t%4.4f\n',iters,obj.funevals,fbefore);
+                end
+
                
                 % print the intermediate values
                 for i=1:nvars
@@ -667,7 +676,7 @@ classdef FM_HJS_Class < handle
                     % save the intermediate values for later plotting
                     if obj.debug
                         element = num2cell(horzcat(obj.funevals,fbefore,xbefore));
-                        obj.hookeContour=[obj.hookeContour;element];                        
+                        obj.hookeContour=[obj.hookeContour;element]; 
                     end
                     
                     % find the best new point, one coordinate at a time
@@ -718,8 +727,10 @@ classdef FM_HJS_Class < handle
                          delta = delta .* rho;
                      end
 
+                end
+                 if obj.verbose
+                    fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )
                  end
-                 fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )
             end
             endpt = xbefore;
         end
@@ -835,7 +846,72 @@ classdef FM_HJS_Class < handle
          
     end
     
-    
+    %% ====================================================================
+    % Experimentation
+    methods (Access = public)
+        function fContourFP(obj)
+            % Objective function contour for carrier fr3equency and phase
+            omega1 = 2.047812652508917e-02;
+            omega2 = 1.570796319854123e0;
+            omega3 = 1.021630416912134e-02; 
+            x = [omega1,omega2,omega3];
+            y = obj.f(x);
+            
+            iter = 100;
+            y = zeros(iter,iter);
+            dOmega1 = linspace(0,omega1*2,iter);
+            dOmega2 = linspace(0,omega2*2,iter);
+            %dOmega2 = linspace(1,2,iter);
+            count=0;
+            wb=waitbar(count,'wait');
+            for i = 1:iter
+                for j = 1:iter
+                    y(i,j) = obj.f([dOmega1(i),dOmega2(j),omega3]);
+                    count = count+1;
+                    waitbar(count/iter^2);
+                end
+            end
+            close(wb)
+            contour3(dOmega1,dOmega2,y,50)
+            colormap(hsv)           
+            xlabel('Carrier frequency')
+            ylabel('Carrier Phase')
+            
+        end
+        
+        function fContourPD(obj)
+            % Objective function contour for carrier phase and delta-freq
+            
+            omega1 = 2.047812652508917e-02;
+            omega2 = 1.570796319854123e0;
+            omega3 = 1.021630416912134e-02; 
+%             x = [omega1,omega2,omega3];
+%             y = obj.f(x);
+            
+            iter = 100;
+            y = zeros(iter,iter);
+            dOmega1 = linspace(0,omega1*2,iter);
+            dOmega2 = linspace(0,omega2*2,iter);
+            dOmega3 = linspace(0,omega3*2,iter);
+            count=0;
+            wb=waitbar(count,'wait');
+            for i = 1:iter
+                for j = 1:iter
+                    y(i,j) = obj.f([omega1,dOmega2(i),dOmega3(j)]);
+                    count = count+1;
+                    waitbar(count/iter^2);
+                end
+            end
+            close(wb)
+            contour3(dOmega2,dOmega3,y,50)
+            colormap(hsv)           
+            xlabel('Carrier Phase')
+            ylabel('Delta Freq')
+            
+        end
+        
+        
+    end    
     %% =========================================================================
    
     % Static Methods
