@@ -44,7 +44,8 @@ while i<= numel(varargin)
             ylabel('Amplitude')    
             
         case ('fcontour3')
-            % obj.plot('fcontour3',omega,resolution,fun) 
+            % plots a 3D contour map of the objective function obj.f(x)
+            % obj.plot('fcontour3',omega,resolution) 
             %   omega:  
             % an N x 2 matrix with N dimensions and the columns being the begin and
             % end points for each dimension.  All dimensions except 2 of
@@ -52,6 +53,8 @@ while i<= numel(varargin)
             %   resolution:
             % The number f points to plot in the x and y axis.  The Z axis
             % will have resolution^2 points
+            
+            % Later, can add a function handle to plot other function contour maps.
             %   fun:
             % function handle
             
@@ -62,6 +65,8 @@ while i<= numel(varargin)
             end
             i = i+1; omega = varargin{i};
             i = i+1; resolution = varargin{i};
+            
+            % Later, can add a function handle to plot other function contour maps.
             %i = i+1; fun = varargin{i};
             %OMEGA = fcontour3(omega,resolution);
             
@@ -92,6 +97,7 @@ while i<= numel(varargin)
                     return
                 end
                 
+                % name the existing figure
                 f = gcf;
                 f.Name = sprintf('%s_BSA',obj.Name);
 
@@ -128,7 +134,8 @@ while i<= numel(varargin)
             contour3(x,y,z,30)
             xlabel(xLbl),ylabel(yLbl)
         
-         case('hookeContour')             
+        % This may be obsolete if we are no longer debugging the hooke-jeeves search 
+        case('hookeContour')             
              x = cell2mat(obj.hookeContour(:,1));
              fx = cell2mat(obj.hookeContour(:,2));
              f = figure(obj.fig); obj.fig = obj.fig+1;
@@ -164,59 +171,5 @@ while i<= numel(varargin)
 
 end
 
-
-end
-
-function OMEGA = fcontour3(omega,resolution)
-    % plots a 3D contour map of a function with 2 variables.  Nore
-    % variables are allowed in the function, but they must be held constant
-    
-    % check the input arguments
-    if (size(omega,2)~= 2)
-        warning('fcontour3 argument omega must be a matrix with 2 columns')
-        return
-    else
-        if ~(isscalar(resolution))
-            warning('fcontour3 argument resolution must be a scalar integer')
-            return
-%        else
-%             if ~isa(fun,'function_handle')
-%                 warning('fcontour3 argument fun must be a function handle')
-%                 return
-%             end
-        end        
-    end
-    % final check, only two of the rows in omega can have unequal columns
-    count = 0;
-    rng = zeros(2,1);
-    for i = 1 : size(omega,1)
-        if omega(i,1)~=omega(i,2)
-            count = count+1;
-        end        
-    end
-    if count~=2
-        warning('omega must have exactly 2 rows of unequal ranges')
-        return
-    end
-    
-    % finally, we can now plot the contour    
-    OMEGA = [];
-    for i = 1 : size(omega,1)
-        OMEGA = horzcat(OMEGA,linspace(omega(i,1),omega(i,2),resolution)');
-    end
-    
-%     count = 0;
-%     wb=waitbar(count,'Drawing Contour');
-%     y = zeros(resolution,resolution);
-%     for i = 1:resolution
-%         for j = 1:resolution
-%             y = fun([OMEGA(i,1),OMEGA(j,1),OMEGA(i,1)]); 
-%             count = count+1;
-%             waitbar(count/resolution^2)
-%         end
-%     end
-%     close(wb)
-%     %contour3(
-    
 
 end

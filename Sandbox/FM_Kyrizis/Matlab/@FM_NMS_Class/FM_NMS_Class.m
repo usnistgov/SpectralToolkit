@@ -109,7 +109,11 @@ classdef FM_NMS_Class < handle
                         
         Name            % Name of the class instance           
         verbose         % logical to show status messages if "true"
-        fig = 1         % keeps t4rack of plot figure numbers
+        fig = 1         % keeps track of plot figure numbers
+        
+       
+       Hooke = false;    % use Hooke-Jeeves rather than Nelder-Mead for BSA
+
         
         %Debugging properties
         debug           % logical true if in debugging mode
@@ -156,8 +160,7 @@ classdef FM_NMS_Class < handle
        % BSA model properties
        V_norm           % normalized eiganvector of the model
        invD_norm
-       hi
-
+       hi       
              
    end   
    
@@ -461,17 +464,19 @@ classdef FM_NMS_Class < handle
             % same values as those used to generate.
             
             % Observation of the objective function contour shows us that a
-            % grid of 12 points across =pi to pi and 10 points from 0 to 25
-            % DF will have at least one or two good initial guesses.  This
-            % would be 120 function evals if allowed to search all points.
+            % grid of 20 points across 0 to 2 pi and from 0 to 4DF
+            % will have at least one or two good initial guesses up to DF of about 50.  
+            % This would be 400 function evals if allowed to search all points.
             % But we also know that there are no local minima, so once we
             % reach a threshold of the objective function, we know our
-            % start value will be good enough.
+            % start value will be good enough.  Typically we get less than 36 fevals
             
-            % look for a difference of 2000 between zBest and zWorst to stop searching
+            % look for a difference between zBest and zWorst to stop searching
             
+            obj.funevals = 0;
             startpt(1) = 2*pi*obj.Freq_Gen*obj.Tsamp;     % Carrier frequency is assumed to be good enough
-            grid = 20;
+            grid = 20;      % This is the grid search resolution, number of points per axis.
+            thresh = 3000;   % this is the grid search threshold:  difference between worst and best before stopping the search
             OMEGA2 = linspace(0,2*pi,grid);
             OMEGA3 = linspace(0,4*2*pi*obj.DeltaF_Gen*obj.Tsamp,grid);
             z = zeros(12,10);
@@ -482,19 +487,24 @@ classdef FM_NMS_Class < handle
                     z(i,j) = obj.f([startpt(1),OMEGA2(i),OMEGA3(j)]);
                     if z(i,j) < zBest, zBest = z(i,j); end
                     if z(i,j) > zWorst, zWorst = z(i,j); end 
-                    if abs(zWorst-zBest) > 3000,break,end                                            
+                    if abs(zWorst-zBest) > thresh,break,end                                            
                 end
-                if abs(zWorst-zBest) > 3000,break,end 
+                if abs(zWorst-zBest) > thresh,break,end 
             end
             startpt(2) = OMEGA2(i);
             startpt(3) = OMEGA3(j);
             
+            %  vebose display ----------------------------
+            if obj.verbose
+                fprintf('Grid Search: Phase start = %e, DF start = %e, funevals = %d\n',startpt(2),startpt(3),obj.funevals)                
+            end
+            % ---------------------------------------------
+            % debugging display of contour plots -----------
             if obj.debug
                 figure(obj.fig);obj.fig=obj.fig+1;
                 dF = 2*pi*obj.DeltaF_Gen*obj.Tsamp;
                 obj.plot('fcontour3',[startpt(1),startpt(1);0,2*pi;0,2*dF],30)
                 hold on
-                %contour3(OMEGA2,OMEGA3,z,'.') 
                 for k = 1:i
                     for l = 1:j
                         plot3(OMEGA2(k),OMEGA3(l),z(k,l),'.')
@@ -502,58 +512,55 @@ classdef FM_NMS_Class < handle
                 end
                 hold off
             end
-                        
-                        
-%             startpt(1) = 2*pi*obj.Freq_Gen*obj.Tsamp;   % Carrier frequency 
-%             startpt(2) = obj.Phi_Gen;                   % Carrier phase
-%             startpt(3) = 2*pi*obj.DeltaF_Gen*obj.Tsamp; % Peak Frequency range
+            % ----------------------------------------------------
+                                                             
             nvars = length(startpt);
             obj.funevals = 0;
             
             
-            % 
-            % ------Replacing Hooke-Jeeves with Nelder Mead(NM)
-            %[iters,obj.endpt_BSA] = obj.hooke(nvars,startpt, obj.rho_BSA, obj.epsilon_BSA, obj.iterMax_BSA);
-                        
-            % Using fminsearch(problem)where problem is a structure.  see MATLAB "doc fminsearch"
-            opts = optimset(@fminsearch);    % configures NM options with default values
-            opts.TolX = 1e-8;
-            opts.TolFun = 1e8;
-            PROBLEM = struct('objective',[],'X0',[],'options',opts,'solver','fminsearch');
-            X0 = startpt;
-            PROBLEM.X0 = X0;
-            PROBLEM.objective = @(X0) obj.f(X0);  
-            %PROBLEM.objective = @(X0) obj.fopt1(omega1,X0);         % handle to the objective function
-            
-            if obj.debug
-                %PROBLEM.options.PlotFcns = 'optimplotfval';  % can plot val or x but not both
-                %PROBLEM.options.PlotFcns = 'optimplotx';
-                %PROBLEM.options.Display = 'iter'
-                PROBLEM.options.OutputFcn = @obj.out;
-                %[obj.endpt_BSA,fval,exitflag,outpoint] = fminsearch(PROBLEM);
-                %pause
-                %X0 = [omega1,obj.endpt_BSA];
-                %PROBLEM.X0 = X0;                
-                %PROBLEM.objective = @(X0) obj.f(X0);         % handle to the objective function
-                [obj.endpt_BSA,fval,exitflag,outpoint] = fminsearch(PROBLEM);
-               
+            if ~obj.Hooke
+                % ------Replacing Hooke-Jeeves with Nelder Mead(NM)
+                %[iters,obj.endpt_BSA] = obj.hooke(nvars,startpt, obj.rho_BSA, obj.epsilon_BSA, obj.iterMax_BSA);
                 
-            else
-                [obj.endpt_BSA] = fminsearch(PROBLEM);
-            end
-            %--------------------------------------------------
-            
-            % display the result
-            if obj.verbose
-                fprintf('\n==========\nTotal iterations: %d\n',iters)
-                nfun = (obj.ifun-1)/2;
-                fList = '';
-                for k = 1:nfun
-                    fItem = sprintf('%d: %f \n',k,obj.endpt_BSA(k));
-                    fList = sprintf('%s %s',fList,fItem);
+                % Using fminsearch(problem)where problem is a structure.  see MATLAB "doc fminsearch"
+                opts = optimset(@fminsearch);    % configures NM options with default values
+                opts.TolX = 1e-8;
+                opts.TolFun = 1e8;
+                PROBLEM = struct('objective',[],'X0',[],'options',opts,'solver','fminsearch');
+                X0 = startpt;
+                PROBLEM.X0 = X0;
+                PROBLEM.objective = @(X0) obj.f(X0);
+                %PROBLEM.objective = @(X0) obj.fopt1(omega1,X0);         % handle to the objective function
+                
+                if obj.debug
+                    %figure(obj.fig);obj.fig=obj.fig+1;                    
+                    %PROBLEM.options.PlotFcns = 'optimplotfval';  % can plot val or x but not both
+                    %PROBLEM.options.PlotFcns = 'optimplotx';     % bar chart of x but cannot also plot val
+                    %PROBLEM.options.Display = 'iter'             % display info on a per-iteration basis
+                    PROBLEM.options.OutputFcn = @obj.out;         % plots the contour map and points
+                    [obj.endpt_BSA,fval,exitflag,outpoint] = fminsearch(PROBLEM);
+                    hold off
+                    %pause
+                else
+                    [obj.endpt_BSA] = fminsearch(PROBLEM);
                 end
-                fprintf('BSA Frequencies (rad/unit):\n%s',fList);
+                % --------------------------------------------------------
+            else
+                [iters,obj.endpt_BSA] = obj.hooke(nvars,startpt, obj.rho_BSA, obj.epsilon_BSA, obj.iterMax_BSA);
+                % display the result
+                if obj.verbose
+                    fprintf('\n==========\nTotal iterations: %d\n',iters)
+                    nfun = (obj.ifun-1)/2;
+                    fList = '';
+                    for k = 1:nfun
+                        fItem = sprintf('%d: %f \n',k,obj.endpt_BSA(k));
+                        fList = sprintf('%s %s',fList,fItem);
+                    end
+                    fprintf('BSA Frequencies (rad/unit):\n%s',fList);
+                end
+                
             end
+           
             
         end
         
@@ -804,8 +811,10 @@ classdef FM_NMS_Class < handle
                          delta = delta .* rho;
                      end
 
+                end
+                 if obj.debug
+                    fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )
                  end
-                 fprintf("steplength = %e, df(x) = %1.10e\n",steplength, abs(newf-fbefore) )
             end
             endpt = xbefore;
         end
@@ -838,11 +847,11 @@ classdef FM_NMS_Class < handle
              x = [omega1,X0];
              y = obj.f(x);
          end
-         
-         function [y] = f_PD(obj,w1,w2,w3)
-             x =[w1,w2,w3];
-             y = obj.f(x);
-         end             
+% This can be deleted         
+%          function [y] = f_PD(obj,w1,w2,w3)
+%              x =[w1,w2,w3];
+%              y = obj.f(x);
+%          end             
                   
          function [y] =f(obj,x)
              obj.funevals = obj.funevals+1;
@@ -941,7 +950,6 @@ classdef FM_NMS_Class < handle
             switch state
                 case 'init'
                     hold off
-                    %obj.fContourPD()
                     f = 2*pi*50*obj.Tsamp;
                     f1 = 2*pi*45*obj.Tsamp;
                     f2 = 2*pi*55*obj.Tsamp;

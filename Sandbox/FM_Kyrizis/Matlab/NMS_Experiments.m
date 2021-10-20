@@ -46,7 +46,10 @@ classdef NMS_Experiments < matlab.unittest.TestCase
             % As of this update, the Freq_BSA is not finding correct answers for Ka = 2.6,3.1,3.6,6.1,7.1,8.1 
            %obj.NMS.modNoise = false;    % remove amplitude noise
            %obj.NMS.phaseNoise = false;   % remove phase noise
-
+            
+           obj.NMS.Hooke = false;
+           
+            obj.NMS.fig = 1;
             obj.NMS.verbose = false;
             obj.NMS.debug = true;
             Kincr = 0.5;
@@ -61,6 +64,7 @@ classdef NMS_Experiments < matlab.unittest.TestCase
                 %obj.NMS.fig = 1;
                 obj.NMS.SignalParams(Ka) = k;
                 obj.runOne()  
+                %figure(obj.NMS.fig);obj.NMS.fig=obj.NMS.fig+1;
                 obj.NMS.plot('BSA')
                 
                 k = k + Kincr;
