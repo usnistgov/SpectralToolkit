@@ -105,10 +105,10 @@ classdef FM_NMS_Class < handle
        R_Sq_BSA      % Coefficient of determination
        funevals
        
-       
-                        
+                              
         Name            % Name of the class instance           
         verbose         % logical to show status messages if "true"
+        debug             % logical true if in debugging mode
         fig = 1         % keeps track of plot figure numbers
         
        
@@ -116,7 +116,6 @@ classdef FM_NMS_Class < handle
 
         
         %Debugging properties
-        debug           % logical true if in debugging mode
         hookeContour = {} % cell array, columns: funevals;w0;ka;phi
         
         
@@ -197,6 +196,7 @@ classdef FM_NMS_Class < handle
             defaultGenModData = [];
             defaultGenData = [];
             defaultVerbose = true;
+            defaultDebug = false;
             defaultNoiseParams = struct('NoiseUniformLow',0,'NoiseUniformHi',0,'NoiseGaussMean',0,'NoiseGaussSD',0.000001);
             defaultModNoise = true;
             defaultSigNoise = true;
@@ -222,6 +222,7 @@ classdef FM_NMS_Class < handle
             addParameter(p,'GenModData',defaultGenModData)
             addParameter(p,'GenData',defaultGenData)            
             addParameter(p,'Verbose',defaultVerbose,validBool)
+            addParameter(p,'Debug', defaultDebug,validBool)
             
             
             parse(p,varargin{:})
@@ -239,6 +240,7 @@ classdef FM_NMS_Class < handle
             obj.data = p.Results.GenModData;
             obj.data1 = p.Results.GenData;
             obj.verbose = p.Results.Verbose;
+            obj.debug = p.Results.Debug;
             
             % set up some global variables
             obj.ino = int32(obj.Duration*obj.SampleRate);          
@@ -256,7 +258,7 @@ classdef FM_NMS_Class < handle
     %% =========================================================================
     % Public Methods
     methods (Access = public)
-        function configure(obj) 
+        function obj = configure(obj) 
             % Configures the sample period and number of harmonics to analyse.
             % Generates random noise properties for later use
             % Configures modulating signal parameters and generates the modulating signal if it was not previously uploaded
@@ -314,7 +316,7 @@ classdef FM_NMS_Class < handle
              if obj.modNoise, obj.data = obj.data+obj.phaseNoise; end   
         end
         
-        function mod_Freq_NLS(obj)
+        function obj = mod_Freq_NLS(obj)
             % Least-Squared fit of the modulation signal
             
             new_bi = zeros(obj.ifun+1,1);
@@ -362,7 +364,7 @@ classdef FM_NMS_Class < handle
             
         end
         
-        function mod_Amp_NLS(obj)   
+        function obj = mod_Amp_NLS(obj)   
             % Using the results calculated by mod_Freq_NLS(), 
             % calculates the amplitude and phase of the modulating signal
             
@@ -864,7 +866,7 @@ classdef FM_NMS_Class < handle
              % set GIJ
              k=1;
              while k<(obj.ifun+1)/2
-                Onda = Onda + (obj.Mod_NLS(k+1)/(k*obj.Freq_NLS))*sin(k*(obj.Freq_NLS*i+omega(2))+obj.phi_NLS(k+1));
+                 Onda = Onda + (obj.Mod_NLS(k+1)/(k*obj.Freq_NLS))*sin(k*(obj.Freq_NLS*i+omega(2))+obj.phi_NLS(k+1));
                 k = k+1;
              end
              GIJ = zeros(obj.ino,3);
@@ -965,38 +967,38 @@ classdef FM_NMS_Class < handle
                     drawnow
             end
         end
-            
-            function fContourPD(obj)
-            % Objective function contour for carrier phase and delta-freq
-            
-            omega1 = 2.047812652508917e-02;
-            omega2 = 1.570796319854123e0;
-            omega3 = 1.021630416912134e-02; 
-%             x = [omega1,omega2,omega3];
-%             y = obj.f(x);
-            
-            iter = 100;
-            y = zeros(iter,iter);
-            dOmega1 = linspace(0,omega1*2,iter);
-            dOmega2 = linspace(0,omega2*2,iter);
-            dOmega3 = linspace(0,omega3*2,iter);
-            count=0;
-            wb=waitbar(count,'wait');
-            for i = 1:iter
-                for j = 1:iter
-                    y(i,j) = obj.f([omega1,dOmega2(i),dOmega3(j)]);
-                    count = count+1;
-                    waitbar(count/iter^2);
-                end
-            end
-            close(wb)
-            contour3(dOmega2,dOmega3,y,50)
-            colormap(hsv)           
-            xlabel('Carrier Phase')
-            ylabel('Delta Freq')
-            colorbar
-            
-       end
+% replaced by obj.plot('fcontour3')            
+%             function fContourPD(obj)
+%             % Objective function contour for carrier phase and delta-freq
+%             
+%             omega1 = 2.047812652508917e-02;
+%             omega2 = 1.570796319854123e0;
+%             omega3 = 1.021630416912134e-02; 
+% %             x = [omega1,omega2,omega3];
+% %             y = obj.f(x);
+%             
+%             iter = 100;
+%             y = zeros(iter,iter);
+%             dOmega1 = linspace(0,omega1*2,iter);
+%             dOmega2 = linspace(0,omega2*2,iter);
+%             dOmega3 = linspace(0,omega3*2,iter);
+%             count=0;
+%             wb=waitbar(count,'wait');
+%             for i = 1:iter
+%                 for j = 1:iter
+%                     y(i,j) = obj.f([omega1,dOmega2(i),dOmega3(j)]);
+%                     count = count+1;
+%                     waitbar(count/iter^2);
+%                 end
+%             end
+%             close(wb)
+%             contour3(dOmega2,dOmega3,y,50)
+%             colormap(hsv)           
+%             xlabel('Carrier Phase')
+%             ylabel('Delta Freq')
+%             colorbar
+%             
+%        end
     end
     
     %% =========================================================================

@@ -41,8 +41,8 @@ while i<= numel(varargin)
             plot(t,obj.Residue_BSA,'.k')
             title('BSA Residue')
             xlabel('Samples')
-            ylabel('Amplitude')    
-            
+            ylabel('Amplitude')                        
+        
         case ('fcontour3')
             % plots a 3D contour map of the objective function obj.f(x)
             % obj.plot('fcontour3',omega,resolution) 
@@ -99,6 +99,7 @@ while i<= numel(varargin)
                 
                 % name the existing figure
                 f = gcf;
+                set(gca,'FontSize',18)
                 f.Name = sprintf('%s_BSA',obj.Name);
 
                 % Create vectors of omega values to check.  Also x and y will be the 
@@ -111,10 +112,10 @@ while i<= numel(varargin)
                     if omega(i,1)~=omega(i,2)
                         if isempty(x)
                             x = OMEGA(:,i);
-                            if i==1,xLbl='Carrier Freq';else,xLbl='Phase';end
+                            if i==1,xLbl='Carrier Freq (Hz)';else,xLbl='Phase (rad)';end
                         else
                             y = OMEGA(:,i);
-                            if i==2,yLbl='Phase';else,yLbl='Delta Freq';end
+                            if i==2,yLbl='Phase (rad)';else,yLbl='Delta Freq (Hz/s)';end
                             
                         end
                     end
@@ -131,8 +132,8 @@ while i<= numel(varargin)
                 end
             end
             close(wb)
-            contour3(x,y,z,30)
-            xlabel(xLbl),ylabel(yLbl)
+            contour3(x,y,z,30,'-k')
+            xlabel(xLbl),ylabel(yLbl),zlabel('f eval')
         
         % This may be obsolete if we are no longer debugging the hooke-jeeves search 
         case('hookeContour')             
