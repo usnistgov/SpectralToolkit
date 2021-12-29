@@ -596,7 +596,8 @@ classdef FM_NMS_Class < handle
             end  
             cBSA = complex(a,b);        % complex
             obj.Modulo_BSA = abs(cBSA);
-            obj.Phi_BSA = angle(cBSA);
+            %obj.Phi_BSA = angle(cBSA);
+            obj.Phi_BSA = -angle(cBSA);
             
             %a_corr = zeros((nfun+1)/2,1);    % preallocation not needed
             %b_corr = zeros((nfun+1)/2,1);
