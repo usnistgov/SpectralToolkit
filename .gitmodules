@@ -1,0 +1,3 @@
+[submodule "AnalyticTimeSeries"]
+	path = AnalyticTimeSeries
+	url = https://github.com/usnistgov/AnalyticTimeSeries.git
