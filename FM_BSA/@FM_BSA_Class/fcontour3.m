@@ -1,5 +1,5 @@
 % contour plots for debugging
-    function fcontour3(omega,resolution,fun,phase)
+    function fcontour3(omega,resolution,fun)
         % plots a 3D contour map of the objective function f(x)
         % fcontour3(omega,fun, res)
         %
@@ -50,9 +50,9 @@
         for ip = 1:resolution
             for jp = 1:resolution
                 if f_dF
-                    zp(ip,jp) = fun([OMEGA(jp,1),OMEGA(ip,2),OMEGA(ip,3)],phase);
+                    zp(ip,jp) = fun([OMEGA(jp,1),OMEGA(ip,2),OMEGA(ip,3)]);
                 else
-                    zp(ip,jp) = fun([OMEGA(ip,1),OMEGA(jp,2),OMEGA(ip,3)],phase);
+                    zp(ip,jp) = fun([OMEGA(ip,1),OMEGA(jp,2),OMEGA(ip,3)]);
                 end
                 count = count+1;
                 waitbar(count/resolution^2)

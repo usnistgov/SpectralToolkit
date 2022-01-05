@@ -1,7 +1,7 @@
-function y = objFun(obj, x, phase)
+function [y] = objFun(obj, x)
 obj.funEvals = obj.funEvals+1;
 nSamples = obj.nSamples;
-mod_Freq = 2*pi*obj.Fm*obj.dT;
+mod_Freq = 2*pi*obj.Fm(obj.phase)*obj.dT;
 
 omega = x;  % [carrier freq, modulation phase, delta_Freq;
 t = double(0:nSamples-1)';   % time vector
@@ -9,12 +9,10 @@ t = double(0:nSamples-1)';   % time vector
 % The hypothesis
 GIJ = zeros(nSamples,3);
 GIJ(:,1) = 1;       %DC
-GIJ(:,2) = cos(omega(1)*t+omega(3)/mod_Freq(phase)*sin(mod_Freq(phase)*t+omega(2)));
-GIJ(:,3) = sin(omega(1)*t+omega(3)/mod_Freq(phase)*sin(mod_Freq(phase)*t+omega(2)));
+GIJ(:,2) = cos(omega(1)*t+omega(3)/mod_Freq*sin(mod_Freq*t+omega(2)));
+GIJ(:,3) = sin(omega(1)*t+omega(3)/mod_Freq*sin(mod_Freq*t+omega(2)));
 
-y = -prob(GIJ);
-        
-
+y = -prob(GIJ); 
 
 %%=========================================================================
 % nested functions
@@ -24,13 +22,13 @@ y = -prob(GIJ);
         nFun = size(HIJ,2);
         hi = zeros(nFun,1);
         for j=1:nFun
-            h1 = sum(obj.Samples(:,phase).*HIJ(:,j));
+            h1 = sum(obj.Samples(:,obj.phase).*HIJ(:,j));
             hi(j)=h1;
         end
         h2 = sum(hi.^2);
         h2bar = h2/nFun;
         
-        y2 = sum(obj.Samples(:,phase).^2);
+        y2 = sum(obj.Samples(:,obj.phase).^2);
         y2bar = y2/iNo;
         
         qq = 1-h2/y2;

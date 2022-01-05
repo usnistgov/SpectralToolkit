@@ -116,17 +116,14 @@ classdef test_FM_BSA < matlab.unittest.TestCase
     methods (Test)
         function regressionTests(self)
             self.fig = 1;
-            %FcarrDfContour(self) 
-            %test50f0_2m0_2a5(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
-            %test50f0_5m0_5a0(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
+            test50f0_2m0_2a5(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
+            test50f0_5m0_5a0(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
         end
         
         function experiments(self)
             %FcarrDfContour(self) 
-            GridSearchThreshold(self)
+            %GridSearchThreshold(self)
         end
-            
-            
     end
     
     
@@ -203,15 +200,16 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             
             figure(self.fig),self.fig = self.fig+1;
             omega_F_dF = [[wCarr/2,wCarr*2];[0,0];[0,2*dF]];
-            FM.fcontour3(omega_F_dF,30,@FM.objFun,1);
+            FM.phase = 1;
+            FM.fcontour3(omega_F_dF,30,@FM.objFun);
             
             figure(self.fig),self.fig = self.fig+1;
             omega_F_phi = [[wCarr/2,wCarr*2];[-pi,pi];[dF,dF];];
-            FM.fcontour3(omega_F_phi,30,@FM.objFun,1);
+            FM.fcontour3(omega_F_phi,30,@FM.objFun);
             
             figure(self.fig),self.fig = self.fig+1;
             omega_phi_dF = [[wCarr,wCarr];[-pi,pi];[0,2*dF]];
-            FM.fcontour3(omega_phi_dF,30,@FM.objFun,1);                       
+            FM.fcontour3(omega_phi_dF,30,@FM.objFun);                       
         end
         
         function GridSearchThreshold(self)
@@ -275,20 +273,21 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                         real(self.Window.Data)...
                         );
                     
+                    FM.phase = 1;
                     startPt1 = 2*pi*self.SignalParams(Fin,1)*dT;
                     OMEGA2 = linspace(-pi,pi,grid);
                     OMEGA3 = linspace(0,2*dF,grid);
                     
                     if self.debug
                         OMEGA = [startPt1,startPt1;-pi,pi;0,2*dF];
-                        FM.fcontour3(OMEGA,res,@FM.objFun,1)
+                        FM.fcontour3(OMEGA,res,@FM.objFun)
                         hold on
                     end
                     
                     z = zeros(grid,grid);
                     for k = 1:grid
                         for j = 1:grid
-                            z(j,k) = FM.objFun([startPt1,OMEGA2(j),OMEGA3(k)],1);
+                            z(j,k) = FM.objFun([startPt1,OMEGA2(j),OMEGA3(k)]);
                             if self.debug
                                plot3(OMEGA2(j),OMEGA3(k),z(j,k),'*') 
                             end
@@ -333,9 +332,6 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             zlabel('-log( objective function value)')
                       
          end
-        
-        
-
     end
     
     %% --------------------------------------------------------------------    
@@ -346,11 +342,11 @@ classdef test_FM_BSA < matlab.unittest.TestCase
         function self=setTsDefaults(self)
             % Clear the SignalParams and set default values
             self.Name = 'Default';
-            self.SignalParams = zeros(15,6);
+            self.SignalParams = zeros(15,3);
             [Xm, Fin, Ps] = self.getParamIndex();
             self.SignalParams(Xm,:) = 1;
             self.SignalParams(Fin,:) = 50;
-            self.SignalParams(Ps,:) = [0,-120,120,0,-120,120];
+            self.SignalParams(Ps,:) = [0,-120,120];
         end
         
         
@@ -381,7 +377,8 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             [~,Fin,~,~,~,~,Fa,Ka] = self.getParamIndex();
                                     
             % pre allocate actual (returned fitter) data arrays and expected value arrays
-            actSynx = zeros(length(self.SignalParams(1,:))+2,self.F0);
+            nSymComp = floor(size(self.SignalParams,2)/3);
+            actSynx = zeros(length(self.SignalParams(1,:))+nSymComp,self.F0);
             expSynx = actSynx;            
             actFreq = zeros(1,self.F0);
             expFreq = actFreq;
@@ -401,9 +398,23 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                     'verbose',self.verbose,...
                     'debug', self.debug....
                     );
-                    
-                [startPoint] = FM.GridSearch(); 
-                
+                 
+                Synx = zeros(1,FM.nPhases);
+                Freq = Synx;
+                ROCOF = Synx;
+                FM.fig = 1;
+                for phase = 1:FM.nPhases
+                    FM.phase = phase;
+                    if FM.debug,figure(FM.fig);FM.fig=FM.fig+1;end
+                    [startPt] = FM.GridSearch(); 
+                    if FM.debug,figure(FM.fig);FM.fig=FM.fig+1;end
+                    [endpt_BSA] = FM.BSA_Est(startPt);
+                    if FM.debug,figure(FM.fig);FM.fig=FM.fig+1;end
+                    [estParams] = FM.Param_Est(endpt_BSA);
+                    [Synx(phase),Freq(phase),ROCOF(phase)] = FM.Synx_Calc(estParams);
+                end
+                actFreq(i) = mean(Freq); actROCOF(i)=mean(ROCOF);
+                actSynx(:,i) = self.calcSymComp(Synx.');
                 
                 expSynx(:,i) = self.calcSymComp(self.Window.UserData.Vals.')/sqrt(2);
                 expFreq(i) = mean(self.Window.UserData.Freqs(1:3));
@@ -416,8 +427,8 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             if bDisplay == true, self.dispErrors(act,exp,self.fig),end
             
             self.verifyEqual(actSynx,expSynx,'AbsTol',1e-6)
-            self.verifyEqual(actFreq,expFreq,'AbsTol',1e-5)
-            self.verifyEqual(actROCOF,expROCOF,'AbsTol',1e-4)
+            self.verifyEqual(actFreq,expFreq,'RelTol',1e-5)
+            self.verifyEqual(actROCOF,expROCOF,'RelTol',1e-5)
             
         end
         
@@ -437,6 +448,62 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                 varargout{i}=i;
             end
         end
+        
+       %=======================================
+        
+        function symComp = calcSymComp(x)
+            nPhases = size(x,1);
+            
+            if nPhases == 1
+                symComp = x;
+                return
+            else
+                %Calculating symmetrical components
+                alfa = exp(2*pi*1i/3);
+                Ai = (1/3)*[1 1 1; 1 alfa alfa^2; 1 alfa^2 alfa];
+            
+                Vabc = x(1:3,:);
+                Vzpn = Ai*Vabc; %voltage: zero, positive and negative sequence
+                symComp = horzcat(Vabc.',Vzpn(2));
+                
+                if nPhases < 4, return, end                                       
+                Iabc = x(4:6,:);
+                Izpn = Ai*Iabc; %curren: zero, positive and negative sequence
+            
+                symComp = horzcat(symComp,Iabc.',Izpn(2));
+            end
+        end  
+        
+       %=======================================
+        function dispErrors(act,exp,fig)
+            TVE = sqrt(((real(act.Synx)-real(exp.Synx)).^2+(imag(act.Synx)-imag(exp.Synx)).^2)./(real(exp.Synx).^2+imag(exp.Synx).^2))*100;
+            ME =  (abs(act.Synx)-abs(exp.Synx))./ abs(exp.Synx)*100;
+            PE = wrapToPi(angle(act.Synx)-angle(exp.Synx)).*(180/pi);
+            %PE = wrapToPi(angle(act.Synx)-angle(exp.Synx))./(2*pi.*exp.Freq); 
+            FE = act.Freq-exp.Freq;
+            RFE = act.ROCOF-exp.ROCOF;
+            
+            figure(fig);
+            subplot(5,1,1)
+            plot(TVE');
+            title('TVE (%)')
+            subplot(5,1,2)
+            plot(ME');
+            title('ME (%)')
+            subplot(5,1,3)
+            plot(PE');
+            title('PE (sec)')
+            subplot(5,1,4)
+            plot(FE');
+            title('FE (Hz)')
+            subplot(5,1,5)
+            plot(RFE');
+            title('RFE (Hz/s)')
+                        
+        end        
+        
     end
+    
+    
 
 end

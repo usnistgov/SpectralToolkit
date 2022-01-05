@@ -65,6 +65,8 @@ classdef FM_BSA_Class
         Km                  % index of modulation (required input)
         dT                  % sampling period (required input)
         Samples             % 1D or 2D array of samples in rows and phases in columns
+        phase               % which phase are we working on?
+        nPhases
         
         % correction factors (used for hardware sampling systems)
         MagCorr             % magnitude correction factor
@@ -75,7 +77,6 @@ classdef FM_BSA_Class
     properties (Access = private)
         contourRes = 30;    % Resolution for the objective function contour plots
         grid = 20;          % length and width of the startpoint grid search
-        nPhases
         nSamples  
         funEvals = 1;
         
@@ -135,13 +136,16 @@ classdef FM_BSA_Class
     % Public Methods in external files
     methods (Access = public)
         [startPoint] = GridSearch(obj);
-        y = objFun(obj, x, phase); 
+        y = objFun(obj, x); 
+        [endpt_BSA,argout] = BSA_Est(obj,startPt);
+        [estParams] = Param_Est(obj,endpt_BSA);
+        [Synx,Freq,ROCOF] = Synx_Calc(obj,estParams)
     end
 
     %% =========================================================================
     % Static Methods in external files
     methods(Static)
-        fcontour3(omega,resolution,fun,phase);
+        fcontour3(omega,resolution,fun);
     end
     
 end
