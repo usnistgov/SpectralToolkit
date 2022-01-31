@@ -24,6 +24,7 @@ classdef test_FM_BSA < matlab.unittest.TestCase
         even = true;
         verbose
         debug
+        makeAnimation = false;
      end  
     
     % % Signal params.  Note that the labeling convention comes mostly from the
@@ -116,13 +117,14 @@ classdef test_FM_BSA < matlab.unittest.TestCase
     methods (Test)
         function regressionTests(self)
             self.fig = 1;
-            test50f0_2m0_2a5(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
-            test50f0_5m0_5a0(self); self.fig=self.fig+1; % Phase Modulationm, fm = 2, k = 2.5
+            test50f0_2m0_2a5(self); self.fig=self.fig+1; % Phase Modulation, fm = 2, k = 2.5
+            test50f0_5m0_5a0(self); self.fig=self.fig+1; % Phase Modulation, fm = 2, k = 2.5
         end
         
         function experiments(self)
-            %FcarrDfContour(self) 
-            %GridSearchThreshold(self)
+            FcarrDfContour(self) 
+            %self.debug=true;  % If you want to see all the contour plots
+            GridSearchThreshold(self)
         end
     end
     
@@ -253,10 +255,17 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             varTypes = {'double','double','double'};
             T = table('Size',[nRows,length(varNames)],'VariableTypes',varTypes,'VariableNames',varNames);
             
+            %---------------Movie Making----------------
+            if self.makeAnimation
+                vidfile = VideoWriter('GridSearchContour.mp4','MPEG-4');
+                open(vidfile);
+            end
+            %-------------------------------------------            
+            
             p = 1; % counter for the table
-            if self.debug,figure(self.fig),self.fig=self.fig+1;end
-            for Fm = FmStart:FmIncr:FmEnd
-                for Km = KmStart:KmIncr:KmEnd
+            if self.debug,figure(self.fig),self.fig=self.fig;end
+            for Km = KmStart:KmIncr:KmEnd
+                for Fm = FmStart:FmIncr:FmEnd
                     self.SignalParams(Fa,:) =Fm;
                     self.SignalParams(Ka,:) = Km;
                     dF = 2*pi*Km*Fm*dT;
@@ -281,6 +290,11 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                     if self.debug
                         OMEGA = [startPt1,startPt1;-pi,pi;0,2*dF];
                         FM.fcontour3(OMEGA,res,@FM.objFun)
+                        view([70,30])
+                        zlim([-3e4,0])
+                        ylim([0,0.04])
+                        xlim([0,pi])
+                        title(sprintf('Fm = %1.1f,     Km = %1.1f',Fm,Km),'FontSize',18)
                         hold on
                     end
                     
@@ -294,7 +308,18 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                         end                        
                     end
                     
-                    if self.debug,hold off,refresh,end
+                    if self.debug
+                        hold off
+                        refresh
+                        %----------------- Write Video --------------------
+                        if self.makeAnimation
+                            frame = getframe(gcf);
+                            for v = 1:8
+                                writeVideo(vidfile,frame)
+                            end
+                        end
+                        %--------------------------------------------------
+                    end
                     
                     % Store the parameters and the minimum function value
                     T(p,:) = {Km,Fm,min(min(z))};
@@ -318,8 +343,15 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             xlabel('Km')
             ylabel('Fm')
             zlabel('Minimum objective function value')
-            
-            
+            title('Minimum objective value contour')
+            %---------- Movie making --------------------------------
+            if (self.debug && self.makeAnimation)
+                frame = getframe(gcf);
+                for v = 1:24
+                    writeVideo(vidfile,frame)
+                end
+            end
+            %--------------------------------------------------------
             
             % Now we are going to fit the log function values using a CFIT object
             % ** WARNING**  This next bit of code requires the Fitting Toolbox.
