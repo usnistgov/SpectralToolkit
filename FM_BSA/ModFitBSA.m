@@ -30,7 +30,7 @@ verbose = false;
 debug = true;
 fig = 1;
 res = 30;
-zp = zeros(res,res);
+zp = zeros(res,res);  
 
 % Basic configuration
 [nSamples,nPhases] = size(Samples);
