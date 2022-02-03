@@ -9,7 +9,7 @@ function [startpt] = GridSearch(obj)
 % same values as those used to generate.
 
 % Observation of the objective function contour shows us that a
-% grid of 20 points across 0 to 2 pi and from 0 to 4DF
+% grid of 20 points across 0 to 2 pi and from 0 to 2DF
 % will have at least one or two good initial guesses up to DF of about 50.
 % This would be 400 function evals if allowed to search all points.
 % But we also know that there are no local minima, so once we
@@ -23,20 +23,30 @@ dT = obj.dT;
 Delta_Freq = Fm.*Km;
 
 % Grid search threshold prediction
-% The threshold for the grid search can be predicted using a function of Fm and Km
-p00 = -10.88;
-p10 = 0.3855;
-p01 = 1.038;
-p20 = -0.02687;
-p11 = -0.0004427;
-p02 = -0.1067;
+% The threshold for the grid search can be predicted using a second order function of Fm and Km
 
-thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
-ePoint = exp(-thrLog);
+% p00 = -10.88;
+% p10 = 0.3855;
+% p01 = 1.038;
+% p20 = -0.02687;
+% p11 = -0.0004427;
+% p02 = -0.1067;
+
+% log 10 values
+p00 = 4.723;
+p10 = -0.1674;
+p01 = -0.4506; 
+p20 = 0.01167;
+p11 = 0.0001923; 
+p02 = 0.04632;
+
+thrLog = p00 + p10.*Km + p01.*Fm + p20.*Km.^2 + p11.*Km.*Fm + p02.*Fm.^2;
+%thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
+ePoint = 10^(thrLog + 1i*(pi/log(10)));
 
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
-thresh = ePoint * (-.5/(4800*obj.dT));
+thresh = real(ePoint) * (0.5/(4800*obj.dT));
 
 % display the threshold
 if obj.verbose
@@ -55,6 +65,17 @@ if obj.debug
     %figure(obj.fig),obj.fig=obj.fig+1;
     dF = 2*pi*Delta_Freq*dT;
     obj.fcontour3([startpt(1),startpt(1);-pi,pi;0,2*dF],obj.contourRes,@obj.objFun)
+    
+    % show the plane of the threshold
+    xl = xlim;
+    xPatch = [xl(1), xl(1), xl(2), xl(2)];
+    yl = ylim;
+    yPatch = [yl(1), yl(2),  yl(2), yl(1)];
+    zPatch =[thresh,thresh,thresh,thresh];
+    pch=patch(xPatch,yPatch,zPatch,'red');
+    alpha(pch,.3)
+    title(sprintf('Fm = %1.2f, Km = %1.2f, Thresh = %1.3e',Fm,Km,thresh))
+    view([45,10])
     hold on
 end
 
@@ -74,11 +95,16 @@ for m = 1:obj.grid        % Delta-Freq in columns
         end
         if z(k,m) > zWorst, zWorst = z(k,m);end
         if zBest-zWorst < thresh,break,end
+        %if zBest < thresh,break,end
     end
     if zBest-zWorst < thresh,break,end
+    %if zBest < thresh,break,end
+
 end
 
-if obj.debug,hold off,end
+if obj.debug
+    hold off
+end
 
 % grid search found starting parameters
 startpt(2) = OMEGA2(idxBest(1));
