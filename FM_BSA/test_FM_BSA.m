@@ -339,6 +339,7 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             zMat=reshape (zMin,length(FmStart:FmIncr:FmEnd),length(KmStart:KmIncr:KmEnd));
             figure(self.fig);self.fig=self.fig+1;
             surf(X,Y,zMat)
+            colormap('parula')
             set(gca,'ZScale','log')
             xlabel('Km')
             ylabel('Fm')
@@ -359,6 +360,7 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             SF = fit([x,y],real(-log(zMin)),'poly22');  % fit is our cfit object
             figure(self.fig);self.fig=self.fig+1;
             plot(SF,[x,y],real(-log(zMin)))
+            colormap(flipud(parula));
             xlabel('Km');
             ylabel('Fm');
             zlabel('-log( objective function value)')

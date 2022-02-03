@@ -9,7 +9,7 @@ function [startpt] = GridSearch(obj)
 % same values as those used to generate.
 
 % Observation of the objective function contour shows us that a
-% grid of 20 points across 0 to 2 pi and from 0 to 4DF
+% grid of 20 points across 0 to 2 pi and from 0 to 2DF
 % will have at least one or two good initial guesses up to DF of about 50.
 % This would be 400 function evals if allowed to search all points.
 % But we also know that there are no local minima, so once we
@@ -23,16 +23,26 @@ dT = obj.dT;
 Delta_Freq = Fm.*Km;
 
 % Grid search threshold prediction
-% The threshold for the grid search can be predicted using a function of Fm and Km
-p00 = -10.88;
-p10 = 0.3855;
-p01 = 1.038;
-p20 = -0.02687;
-p11 = -0.0004427;
-p02 = -0.1067;
+% The threshold for the grid search can be predicted using a second order function of Fm and Km
 
-thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
-ePoint = exp(-thrLog);
+% p00 = -10.88;
+% p10 = 0.3855;
+% p01 = 1.038;
+% p20 = -0.02687;
+% p11 = -0.0004427;
+% p02 = -0.1067;
+
+% log 10 values
+p00 = 4.723;
+p10 = -0.1674;
+p01 = -0.4506; 
+p20 = 0.01167;
+p11 = 0.0001923; 
+p02 = 0.04632;
+
+thrLog = p00 + p10.*Km + p01.*Fm + p20.*Km.^2 + p11.*Km.*Fm + p02.*Fm.^2;
+%thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
+ePoint = 10^(thrLog + (pi/log(10)));
 
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
