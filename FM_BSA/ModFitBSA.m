@@ -30,7 +30,7 @@ verbose = false;
 debug = true;
 fig = 1;
 res = 30;
-zp = zeros(res,res);
+zp = zeros(res,res);  
 
 % Basic configuration
 [nSamples,nPhases] = size(Samples);
@@ -82,20 +82,20 @@ Phim_BSA = zeros(1,nPhases);
 
 % Grid search threshold prediction
 % The threshold for the grid search can be predicted using a function of Fm and Km
-p00 = -10.88;
-p10 = 0.3855;
-p01 = 1.038;
-p20 = -0.02687;
-p11 = -0.0004427;
-p02 = -0.1067;
+% log 10 values
+p00 = 4.723;
+p10 = -0.1674;
+p01 = -0.4506; 
+p20 = 0.01167;
+p11 = 0.0001923; 
+p02 = 0.04632;
 
-thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
-ePoint = exp(-thrLog);
-%thresh = -0.5*ePoint;
+thrLog = p00 + p10.*Km + p01.*Fm + p20.*Km.^2 + p11.*Km.*Fm + p02.*Fm.^2;
+ePoint = 10^(thrLog + 1i*(pi/log(10)));
 
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
-thresh = ePoint * (-.5/(4800*dT));
+thresh = real(ePoint) * (0.5/(4800*obj.dT));
 
 if verbose
     fprintf('Threshhold = %f, Fm = %f, Km = %f',thresh(1),Fm(1),Km(1))

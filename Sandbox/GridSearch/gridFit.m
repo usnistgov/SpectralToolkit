@@ -53,7 +53,7 @@ for Km = KmStart:KmIncr:KmEnd
         %thrLog = p(1) + p(2)*Fm + p(3)*Km + p(4)*Fm^2 + p(5)*Km*Fm + p(6)*Km^2;
 
         ePoint = 10^(thrLog + 1i*(pi/log(10)));
-        act(i) = ePoint;
+        act(i) = real(ePoint);
         exp(i) = zMin(i);            
         
     end
