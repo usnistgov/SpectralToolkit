@@ -123,8 +123,9 @@ classdef test_FM_BSA < matlab.unittest.TestCase
         
         function experiments(self)
             %FcarrDfContour(self) 
-            self.debug=true;  % If you want to see all the contour plots
+            %self.debug=true;  % If you want to see all the contour plots
             GridSearchThreshold(self)
+            %FmKmRange(self)
         end
     end
     
@@ -291,7 +292,7 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                         OMEGA = [startPt1,startPt1;-pi,pi;0,2*dF];
                         FM.fcontour3(OMEGA,res,@FM.objFun)
                         view([45,10])
-                        %zlim([-3e4,0])
+                        %zlim([-3e4,0])   % set the axis limits if you do not want autoscaling
                         %ylim([0,0.04])
                         %xlim([0,pi])
                         title(sprintf('Fm = %1.1f,     Km = %1.1f',Fm,Km),'FontSize',18)
@@ -312,12 +313,14 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                         xl = xlim;
                         xPatch = [xl(1), xl(1), xl(2), xl(2)];
                         yl = ylim;
-                        yPatch = [yl(1), yl(2),  yl(2), yl(1)];                       
-                        zPatch = [-3000,-3000,-3000,-3000];
-                        pch=patch(xPatch,yPatch,zPatch,'red');
-                        alpha(pch,.3)
-                        %zl = zlim;
-                        %zlim([0,zl(2)])
+                        
+                        %-----------------
+                        % code to show why we do not want a -3000 fixed threshold
+%                         yPatch = [yl(1), yl(2),  yl(2), yl(1)];                       
+%                         zPatch = [-3000,-3000,-3000,-3000];
+%                         pch=patch(xPatch,yPatch,zPatch,'red');
+%                        alpha(pch,.3)
+                        %------------------
                         
                         hold off
                         refresh
@@ -337,6 +340,9 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                     
                 end
             end
+            
+            % save the table to a file so we can fool around with it later.
+            writetable(T,'GridSearchMinValues.csv')
             
             % Now perform a curve fit
             x = T{:,'Km'};
@@ -367,13 +373,113 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             % ** WARNING**  This next bit of code requires the Fitting Toolbox.
             %fitFun = ('p00 + p10.*x + p01.*y + p20.*x.^2 + p11.*x.*y + p02.*y.*2');  %Second order polynomial surface
             SF = fit([x,y],real(-log(zMin)),'poly22');  % fit is our cfit object
+            disp(SF)
             figure(self.fig);self.fig=self.fig+1;
             plot(SF,[x,y],real(-log(zMin)))
             xlabel('Km');
             ylabel('Fm');
             zlabel('-log( objective function value)')
                       
-         end
+        end
+         
+        % ==================================================================
+        function FmKmRange(self)
+            
+            bDisplay = false;
+            self.Name = 'GFmKmRange';
+            disp(self.Name)
+            
+            self.Duration = 2;
+            self.SignalParams = zeros(15,1);        % only one phase of data
+            [Xm, Fin, Ps, ~, ~, ~, Fa, Ka] = self.getParamIndex();
+            self.SignalParams(Xm,:) = 1;
+            self.SignalParams(Fin,:) = 50;
+            self.SignalParams(Ps,:) = 0;
+
+            
+            FmStart = 0.5;
+            FmEnd = 5;
+            FmIncr = 0.5;
+            
+            KmStart = 0.5;
+            KmEnd = 5;
+            KmIncr = 0.5;
+            
+            grid = 20;
+            res = 30;
+            
+            dT = 1/self.Fs;
+            wCarr = 2*pi*self.F0*dT;            
+            
+            %---------------Movie Making----------------
+            if self.makeAnimation
+                vidfile = VideoWriter('FmKmRange.mp4','MPEG-4');
+                open(vidfile);
+            end
+            %-------------------------------------------            
+            nTests = length(KmStart:KmIncr:KmEnd)*length(FmStart:FmIncr:FmEnd);
+            actSynx = zeros(length(self.SignalParams(1,:)),nTests);
+            expSynx = actSynx;            
+            actFreq = zeros(1,nTests);
+            expFreq = actFreq;
+            actROCOF = actFreq;
+            expROCOF = actROCOF;
+            
+            
+            if self.debug,figure(self.fig),self.fig=self.fig;end
+            i = 1;
+            for Km = KmStart:KmIncr:KmEnd
+                for Fm = FmStart:FmIncr:FmEnd
+                    self.SignalParams(Fa,:) =Fm;
+                    self.SignalParams(Ka,:) = Km;
+                    self.AnalysisCycles =  ceil(self.SignalParams(Fin,1)/self.SignalParams(Fa,1));
+                    
+                    self.getTimeSeries();
+                    self.Window = self.TS.getWindow(0,self.AnalysisCycles,self.even);
+                    
+                    FM = FM_BSA_Class(...
+                        self.SignalParams(Fin,:),...
+                        self.SignalParams(Fa,:),...
+                        self.SignalParams(Ka,:),...
+                        dT,...
+                        real(self.Window.Data),...
+                        'debug',true...
+                        );
+                    
+                    Synx = zeros(1,FM.nPhases);
+                    Freq = Synx;
+                    ROCOF = Synx;
+                    FM.fig = 1;
+                    for phase = 1:FM.nPhases
+                        FM.phase = phase;
+                        if FM.debug,figure(FM.fig);movegui('north'),FM.fig=FM.fig+1;end
+                        [startPt] = FM.GridSearch();
+%                         if FM.debug,figure(FM.fig),movegui('center'),FM.fig=FM.fig+1;end
+%                         [endpt_BSA] = FM.BSA_Est(startPt);
+%                         if FM.debug,figure(FM.fig);movegui('south'),M.fig=FM.fig+1;end
+%                         [estParams] = FM.Param_Est(endpt_BSA);
+%                         [Synx(phase),Freq(phase),ROCOF(phase)] = FM.Synx_Calc(estParams);
+                    end
+%                     actFreq(i) = mean(Freq); actROCOF(i)=mean(ROCOF);
+%                     
+%                     expSynx(:,i) = self.calcSymComp(self.Window.UserData.Vals.')/sqrt(2);
+%                     expFreq(i) = mean(self.Window.UserData.Freqs);
+%                     expROCOF(i) = mean(self.Window.UserData.ROCOFs);
+%                     
+%                     act = struct('Synx',actSynx,'Freq',actFreq,'ROCOF',actROCOF);
+%                     exp = struct('Synx',expSynx,'Freq',expFreq,'ROCOF',expROCOF);
+%                     if bDisplay == true, self.dispErrors(act,exp,self.fig),end
+%                     
+%                     self.verifyEqual(actSynx,expSynx,'AbsTol',1e-6)
+%                     self.verifyEqual(actFreq,expFreq,'RelTol',1e-5)
+%                     self.verifyEqual(actROCOF,expROCOF,'RelTol',1e-5)
+                    i = i+1;
+                    
+                    
+                end
+            end
+            
+        end
     end
     
     %% --------------------------------------------------------------------    

@@ -31,12 +31,13 @@ p20 = -0.02687;
 p11 = -0.0004427;
 p02 = -0.1067;
 
-thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
+%thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
+thrLog = p00 + p10.*Km + p01.*Fm + p20.*Km.^2 + p11.*Km.*Fm + p02.*Km.^2;
 ePoint = exp(-thrLog);
 
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
-thresh = ePoint * (-.5/(4800*obj.dT));
+thresh = ePoint * (-1/(4800*obj.dT));
 
 % display the threshold
 if obj.verbose
@@ -55,6 +56,17 @@ if obj.debug
     %figure(obj.fig),obj.fig=obj.fig+1;
     dF = 2*pi*Delta_Freq*dT;
     obj.fcontour3([startpt(1),startpt(1);-pi,pi;0,2*dF],obj.contourRes,@obj.objFun)
+    
+    % show the plane of the threshold
+    xl = xlim;
+    xPatch = [xl(1), xl(1), xl(2), xl(2)];
+    yl = ylim;
+    yPatch = [yl(1), yl(2),  yl(2), yl(1)];
+    zPatch =[thresh,thresh,thresh,thresh];
+    pch=patch(xPatch,yPatch,zPatch,'red');
+    alpha(pch,.3)
+    title(sprintf('Fm = %1.2f, Km = %1.2f, Thresh = %1.3e',Fm,Km,thresh))
+    view([45,5])
     hold on
 end
 
@@ -74,8 +86,11 @@ for m = 1:obj.grid        % Delta-Freq in columns
         end
         if z(k,m) > zWorst, zWorst = z(k,m);end
         if zBest-zWorst < thresh,break,end
+        %if zBest < thresh,break,end
     end
     if zBest-zWorst < thresh,break,end
+    %if zBest < thresh,break,end
+
 end
 
 if obj.debug,hold off,end
