@@ -47,7 +47,7 @@ ePoint = 10^(thrLog + 1i*(pi/log(10)));
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
 thresh = real(ePoint) * (0.5/(4800*obj.dT));
-
+%thresh = -3000;
 % display the threshold
 if obj.verbose
     fprintf('Threshhold = %f, Fm = %f, Km = %f',thresh(1),Fm(1),Km(1))
@@ -94,11 +94,11 @@ for m = 1:obj.grid        % Delta-Freq in columns
             idxBest = [k,m];
         end
         if z(k,m) > zWorst, zWorst = z(k,m);end
-        if zBest-zWorst < thresh,break,end
-        %if zBest < thresh,break,end
+        %if zBest-zWorst < thresh,break,end
+        if zBest < thresh,break,end
     end
-    if zBest-zWorst < thresh,break,end
-    %if zBest < thresh,break,end
+    %if zBest-zWorst < thresh,break,end
+    if zBest < thresh,break,end
 
 end
 

@@ -126,7 +126,11 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             %FcarrDfContour(self) 
             self.debug=true;  % If you want to see all the contour plots
             %GridSearchThreshold(self)
-            FmKmRange(self)
+            %FmKmRange(self)
+            %test50f0_2m0_2a5_1Phase(self); self.fig=self.fig+1; % Phase Modulation, fm = 2, k = 2.5
+            %test50f0_2m0_0a5_16000(self); self.fig=self.fig+1;
+            test50f0_2m0_0a5_48000(self); self.fig=self.fig+1;
+            
         end
     end
     
@@ -150,6 +154,24 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             self.runMod1Second(true);           
         end    
         
+        function test50f0_2m0_2a5_1Phase(self)
+            % this is a very high rate FM modulation (peak frequency 5 Hz, peak ROCOF 62 Hz)
+            self.Duration = 2;
+            self.SignalParams = zeros(15,1);        % only one phase of data
+            [Xm, Fin, Ps, ~, ~, ~, Fa, Ka] = self.getParamIndex();
+            self.SignalParams(Xm,:) = 1;
+            self.SignalParams(Fin,:) = 50;
+            self.SignalParams(Ps,:) = 0;
+            
+            [ ~, ~, ~, ~, ~, ~, Fa, Ka, ~, ~] = self.getParamIndex();
+            self.SignalParams(Fa,:) = 2.0;
+            self.SignalParams(Ka,:) = 2.5;
+            self.AnalysisCycles = self.F0/self.SignalParams(Fa,1);  % one modulation cycle
+            self.getTimeSeries();
+            self.TS.Ts.Name = 'test50f0_2m0_2k5';
+            self.runMod1Second(true);           
+        end            
+        
         function test50f0_5m0_5a0(self)
             % this is a very high rate FM modulation (peak frequency 5 Hz, peak ROCOF 62 Hz)
             self.setTsDefaults();
@@ -162,6 +184,44 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             self.TS.Ts.Name = 'test50f0_5m0_5k0';
             self.runMod1Second(true);     
         end
+        
+        function test50f0_2m0_0a5_16000(self)
+            % test at Fs = 16000
+            self.Fs = 16000;
+            self.Duration = 2;
+            self.SignalParams = zeros(15,1);        % only one phase of data
+            [Xm, Fin, Ps, ~, ~, ~, Fa, Ka] = self.getParamIndex();
+            self.SignalParams(Xm,:) = 1;
+            self.SignalParams(Fin,:) = 50;
+            self.SignalParams(Ps,:) = 0;
+            
+            [ ~, ~, ~, ~, ~, ~, Fa, Ka, ~, ~] = self.getParamIndex();
+            self.SignalParams(Fa,:) = 2.0;
+            self.SignalParams(Ka,:) = 0.5;
+            self.AnalysisCycles = self.F0/self.SignalParams(Fa,1);  % one modulation cycle
+            self.getTimeSeries();
+            self.TS.Ts.Name = 'test50f0_0a5_16000';
+            self.runMod1Second(true);           
+        end   
+        
+        function test50f0_2m0_0a5_48000(self)
+            % test at Fs = 48000
+            self.Fs = 48000;
+            self.Duration = 2;
+            self.SignalParams = zeros(15,1);        % only one phase of data
+            [Xm, Fin, Ps, ~, ~, ~, Fa, Ka] = self.getParamIndex();
+            self.SignalParams(Xm,:) = 1;
+            self.SignalParams(Fin,:) = 50;
+            self.SignalParams(Ps,:) = 0;
+            
+            [ ~, ~, ~, ~, ~, ~, Fa, Ka, ~, ~] = self.getParamIndex();
+            self.SignalParams(Fa,:) = 2.0;
+            self.SignalParams(Ka,:) = 2.5;
+            self.AnalysisCycles = self.F0/self.SignalParams(Fa,1);  % one modulation cycle
+            self.getTimeSeries();
+            self.TS.Ts.Name = 'test50f0_0a5_48000';
+            self.runMod1Second(true);           
+        end          
         
         % Experiments
         %------------------------------------------------------------------
@@ -472,12 +532,12 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                             end
                         end
                         %--------------------------------------------------------                                                
-%                         
-%                         if FM.debug,figure(FM.fig),movegui('center'),FM.fig=FM.fig+1;end
-%                         [endpt_BSA] = FM.BSA_Est(startPt);
-%                         if FM.debug,figure(FM.fig);movegui('south'),M.fig=FM.fig+1;end
-%                         [estParams] = FM.Param_Est(endpt_BSA);
-%                         [Synx(phase),Freq(phase),ROCOF(phase)] = FM.Synx_Calc(estParams);
+                        
+                        if FM.debug,figure(FM.fig),movegui('center'),FM.fig=FM.fig+1;end
+                        [endpt_BSA] = FM.BSA_Est(startPt);
+                        if FM.debug,figure(FM.fig);movegui('south'),M.fig=FM.fig+1;end
+                        [estParams] = FM.Param_Est(endpt_BSA);
+                        [Synx(phase),Freq(phase),ROCOF(phase)] = FM.Synx_Calc(estParams);
                     end
 %                     actFreq(i) = mean(Freq); actROCOF(i)=mean(ROCOF);
 %                     
@@ -584,8 +644,11 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                 actSynx(:,i) = self.calcSymComp(Synx.');
                 
                 expSynx(:,i) = self.calcSymComp(self.Window.UserData.Vals.')/sqrt(2);
-                expFreq(i) = mean(self.Window.UserData.Freqs(1:3));
-                expROCOF(i) = mean(self.Window.UserData.ROCOFs(1:3));
+                expFreq(i) = mean(self.Window.UserData.Freqs);
+                expROCOF(i) = mean(self.Window.UserData.ROCOFs);
+                
+                %expFreq(i) = mean(self.Window.UserData.Freqs(1:3));
+                %expROCOF(i) = mean(self.Window.UserData.ROCOFs(1:3));
                 %disp([i, iter]);
             end
             
