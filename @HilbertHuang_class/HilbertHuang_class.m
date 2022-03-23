@@ -1,12 +1,16 @@
 classdef HilbertHuang_class
     % For one time series, creates and contains a set of intrinsic
-    % functions
-    % and Hilbert transform for each
-    %   Input:
-    %       Name
-    %       Timeseries
+    % functions and Hilbert transform for each.  Optional will perform an EMD on a real timeseries of 
+    % can receive a set of IMFs for analysis and visualization.
+    %   Input <Name,Value> pairs:
+    %       "Name" - char array name for this analysis
+    %       "Timeseries" - timeseries object to be analysed
+    %       "EMD" - true/false logical, if true will perform an EMD on the first column of data in the timeseries
+    %       "IMFs" - timeseries object of IMFs
+    %       "Hilbert" - true/false logical to perform EMD followed by IMF on a real timeseries
+    %       "Window" - char array Window type to use on input data:  
     %
-    %   Pro
+    %   Output (see the IMFs and Hilbert Properties
     %
     %
     %
@@ -37,9 +41,9 @@ classdef HilbertHuang_class
             % optional arguments are name/value pairs:
             % name , (name)
             % TimeSeries, timeseries input to EMD. Must be a matlab timeseries type), Only the first column wil be analysed
-            % EMD, (true or false): Perform and Empirical Mode Decomposition
+            % EMD, (true or false): Perform an Empirical Mode Decomposition but not an HHT.
             % IMFs, timeseries containing intermediate mode functions, needed input if EMD is not performed
-            % Hilbert, (true or false): Perform a Hilbert Transform on the IMFs
+            % Hilbert, (true or false): Perform a Hilbert Transform on the timeseries (EMD followed by HHT)
             % 
             
             % checks for data validity

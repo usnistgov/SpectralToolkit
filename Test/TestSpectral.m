@@ -45,11 +45,12 @@ classdef TestSpectral < matlab.unittest.TestCase
 %             testFourierPlots (testCase)
 %             testFourierWindows (testCase)
 %             % testLeakageFunctionPlots (testCase)   % not working yet
+%              testWaterfall (testCase) % create 1 minute of fourier data and make a waterfall plot
 %             
             %--------------------------------------------------------------
 %             % Tests of Hilbert Huang based analysis
-            testHhtFmAnalysis(testCase);
-            testHhtFmActualData(testCase);
+             testHhtFmAnalysis(testCase);
+%             testHhtFmActualData(testCase);
             
         end        
     end
@@ -222,11 +223,64 @@ classdef TestSpectral < matlab.unittest.TestCase
                 % the code in FourierSeries_class is not working yet.
             end
             
+            function testWaterfall (testCase)
+                % our test signal will have 13 harmoncs
+                Fs = 4800;
+                F0 = 60;
+                AnalysisCycles = 6;
+                SignalParams = zeros(4+(12*3)+1,1);
+                SignalParams(1,:) = 1;   % Xm
+                SignalParams(2,:) = F0;   % Fin
+                SignalParams(3,:) = 0;    % Ps
+                SignalParams(4,:) = -1;   % delimiter
+                mags = [2.0,5.0,1.0,6.0,0.5,5.0,0.5,1.5,0.5,3.5,0.5,3.0];
+                for i = 1:12
+                    SignalParams(5+((i-1)*3),:) = F0*(i+1);
+                    SignalParams(6+((i-1)*3),:) = 0;
+                    SignalParams(7+((i-1)*3),:) = mags(i)/100;
+                end
+                SignalParams(4+(12*3)+1,:) = -1;  % delimiter
+                
+                % instantiate the AnalyticTS class with these parameters
+                testCase.TS = AnalyticTS_class(...
+                    'SignalParams',SignalParams,...
+                    'SampleRate', Fs,...
+                    'F0', F0...
+                    );
+                
+                WF = WaterFallPlot_class('FigNum',testCase.fig); testCase.fig = testCase.fig+1
+
+                % Loop for 1 second of data, 6 cycles at a time
+                for i = 1:F0
+                    samples = testCase.TS.getWindow(i,AnalysisCycles);
+                    samples = samples.setuniformtime('StartTime',samples.TimeInfo.Start,'Interval',1/Fs);
+                    testCase.FS = FourierSeries_class('TimeSeries',samples);  % gets the double-sided DFT
+                    
+                    % make the data single-sided
+                    N = testCase.FS.DataInfo.Length;
+                    N_2 = floor(testCase.FS.DataInfo.Length/2);
+                    x = testCase.FS.Freq(1:N_2+1);
+                    y = abs(testCase.FS.Data/N);
+                    y = y(1:N_2+1);
+                    y(2:end-1) = 2*y(2:end-1);
+                    
+                    WF = WF.addStrip(y,x);
+                    
+                    refresh
+                    pause(1/60)
+                    
+
+                end
+                
+                       
+            end
+            
             %--------------------------------------------------------------
-            % The goal of the following code is to ecersize all the code in the
+            % The goal of the following code is to exersize all the code in the
             % AnalyticTS_class
             function testAnalyticTsClass
                 
+         
             end
             
             %--------------------------------------------------------------

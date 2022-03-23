@@ -3,7 +3,7 @@ function obj = Emd(obj)
 % empirical mode decomposition practice function
 %
 % Input:
-%   x must be a timeseries object.  inly the first data column will be analuses
+%   x must be a timeseries object.  only the first data column will be analysed
 % Output:
 %   obj.IMFs is a cell array of time series objects, 
 

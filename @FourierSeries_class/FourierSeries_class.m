@@ -114,7 +114,7 @@ classdef FourierSeries_class < handle
                         i = i+1;
                         switch varargin{i}
                             case 'log'
-                                yMsg = ('Amplitude (log_10)');
+                                yMsg = ('Amplitude (log(10))');
                                 yScale = 'log';
                             case 'dB'
                                 yMsg = ('Amplitude (dB)');
