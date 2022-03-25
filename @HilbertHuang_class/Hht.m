@@ -30,7 +30,24 @@ for i = 1:N
     sig = hilbert(Data);
     energy = abs(sig).^2;
     phaseAngle = angle(sig);
-    omega = gradient(unwrap(phaseAngle))/IMFs.TimeInfo.Increment;
+    
+    % frequency
+    omega = gradient(unwrap(phaseAngle))/(IMFs.TimeInfo.Increment*2*pi);
+    
+    % limit the frequency range and resolution
+    fRange = obj.hilOpts.FreqLimits;
+    if isempty(fRange)
+        fRange = [0,floor(0.5/(IMFs.TimeInfo.Increment))];
+        obj.hilOpts.FreqLimits = fRange;
+    end
+    
+    fRes = obj.hilOpts.FreqResolution;
+    if isempty(fRes)
+        fRes = (fRange(2)-fRange(1))/100;
+        obj.hilOpts.FreqResolution = fRes;
+    end        
+    omega = fRes*round(omega/fRes);  % frequency resolution        
+    omega = omega.*(omega>=fRange(1) & omega<=fRange(2)); % frequency range
     
     P(:,i) = {sig,energy,phaseAngle,omega};
 end

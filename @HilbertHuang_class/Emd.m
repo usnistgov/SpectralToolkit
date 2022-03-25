@@ -9,13 +9,6 @@ function obj = Emd(obj)
 
 x = real(obj.Ts_In.Data);
 
-MaxNumIMFs = 10;
-MaxEnergyRatio = 20;
-MaxNumExtrema = 1;
-SiftMaxIterations = 100;
-SiftRelativeTolarance = 0.2;
-Interpolation = 'spline';
-
 if isrow(x)
     x = x(:);
 end
@@ -23,13 +16,13 @@ end
 rsig = x;       % residual signal
 t = (1:length(x))';
 N = length(x);
-IMFs = zeros(N, MaxNumIMFs, 'double');
+IMFs = zeros(N, obj.emdOpts.MaxNumIMFs, 'double');
 
 %extract IMFs
 i = 0;
 outerLoopExitFlag = 0;
 
-while(i<MaxNumIMFs)
+while(i<obj.emdOpts.MaxNumIMFs)
     % convergence checking
     %sprintf ('IMF %d\n',i);
     [peaksIdx, bottomsIdx] = localFindExtremaIdx(rsig);
@@ -37,12 +30,12 @@ while(i<MaxNumIMFs)
     numResidExtrema = length(peaksIdx) + length(bottomsIdx);
     energyRatio = 10*log10(norm(x,2)/norm(rsig,2));
     
-    if energyRatio > MaxEnergyRatio
+    if energyRatio >obj.emdOpts.MaxEnergyRatio
         outerLoopExitFlag = 1;
         break
     end
     
-    if numResidExtrema < MaxNumExtrema
+    if numResidExtrema < obj.emdOpts.MaxNumExtrema
         outerLoopExitFlag = 2;
         break
     end
@@ -54,9 +47,9 @@ while(i<MaxNumIMFs)
     SiftStopCriterionHit = 'SiftMaxIteration';
     
     % Sifting process
-    while (k<SiftMaxIterations)
+    while (k<obj.emdOpts.SiftMaxIterations)
        % check convergence 
-       if(rtol<SiftRelativeTolarance)
+       if(rtol<obj.emdOpts.SiftRelativeTolarance)
           SiftStopCriterionHit = 'SiftMaxRelativeTolerance'; 
           break;          
        end
@@ -70,8 +63,8 @@ while(i<MaxNumIMFs)
        if((length(peaksIdx) + length(bottomsIdx))>0)
            %compute the upper and lower envelope 
            [uLoc, uVal, bLoc, bVal] = computeSupport(t, rsigL, peaksIdx, bottomsIdx);
-           upperEnvelope(:,1) = interp1(uLoc, uVal, t, Interpolation);
-           lowerEnvelope(:,1) = interp1(bLoc, bVal, t, Interpolation);
+           upperEnvelope(:,1) = interp1(uLoc, uVal, t, obj.emdOpts.Interpolation);
+           lowerEnvelope(:,1) = interp1(bLoc, bVal, t, obj.emdOpts.Interpolation);
            
            % subtract mean envelope from residual
            mVal = (upperEnvelope + lowerEnvelope)/2;
@@ -79,21 +72,21 @@ while(i<MaxNumIMFs)
            mVal(1:N,1) = 0;
        end
        
-%        %------PLOT the rsig and the peak indexes
-%        figure()
-%        plot(rsigL,'-k')
-%        hold on
-%        %pause
-%        plot(peaksIdx,rsigL(peaksIdx),'og')
-%        plot(bottomsIdx,rsigL(bottomsIdx),'db')
-%        %pause
-%        plot(upperEnvelope,'-g')
-%        plot(lowerEnvelope,'-b')
-%        %pause
-%        plot (mVal,'-r')
-%        hold off
-%        %pause
-%        %------
+       %------PLOT the rsig and the peak indexes
+       figure(100)
+       plot(rsigL,'-k')
+       hold on
+       pause
+       plot(peaksIdx,rsigL(peaksIdx),'og')
+       plot(bottomsIdx,rsigL(bottomsIdx),'db')
+       pause
+       plot(upperEnvelope,'-g')
+       plot(lowerEnvelope,'-b')
+       pause
+       plot (mVal,'-r')
+       hold off
+       pause
+       %------
        
        rsigL = rsigL - mVal;
        
@@ -120,6 +113,9 @@ end  % outer while loop
 
 obj.IMFs = timeseries(IMFs(:,1:i),obj.Ts_In.Time,'Name',strcat(obj.Ts_In.Name,' IMF'));
 %obj.IMFs = setuniformtime(obj.IMFs,'StartTime',obj.Ts_In.TimeInfo.Start,'EndTime',obj.Ts_In.TimeInfo.End);
+interval = (obj.Ts_In.TimeInfo.End - obj.Ts_In.TimeInfo.Start)/obj.Ts_In.TimeInfo.Length;
+obj.IMFs = setuniformtime(obj.IMFs,'StartTime',obj.Ts_In.TimeInfo.Start,'Interval',interval);
+
 obj.Residual = rsig;
 
 end  % function

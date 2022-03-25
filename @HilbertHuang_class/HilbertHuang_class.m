@@ -9,6 +9,7 @@ classdef HilbertHuang_class
     %       "IMFs" - timeseries object of IMFs
     %       "Hilbert" - true/false logical to perform EMD followed by IMF on a real timeseries
     %       "Window" - char array Window type to use on input data:  
+    %       "EmdOpts" - EMD options structure (see the documentation of the emdOpts property).
     %
     %   Output (see the IMFs and Hilbert Properties
     %
@@ -29,8 +30,32 @@ classdef HilbertHuang_class
         Residual    % vector of input minus recombined hilbert transforms
         Window      % if set to a recognized window type, will window the IMF before Hilbert, defaults to 'none'
         
+        
+        % option structure for EMD:
+            %'MaxNumIMFs' (default 10)
+            %'MaxEnergyRatio' (default 20) Sifting stops whenthe ratio of the original signal energy to the IMF energy os greater than this
+            %'MaxNumExtrema' (default 1) Sifting stops then the mumber of exterma is less than this
+            %'SiftMaxIterations'
+            %'SiftRelativeTolarance'
+            %'Interpolation'            
+        emdOpts = struct('MaxNumIMFs',10,...
+                         'MaxEnergyRatio',20,...
+                         'MaxNumExtrema',1,... 
+                         'SiftMaxIterations',100,...
+                         'SiftRelativeTolarance',0.2,...
+                         'Interpolation','spline');
+                     
+        % option structure for Hilbert Transform
+            % FreqLimits (default []), limits computing the Hilbert Spectrum
+            % FreqResolution ((FreqLimits(2)-FreqLimits(1))/100),, discretizes the frequency limits
+            % MinThreshold (defualt -inf), any hilber spectrum value less than this will be set to 0.
+        hilOpts = struct('FreqLimits',[],...
+                         'FreqResolution',[],...
+                         'MinThreshold',-inf);
+        
         fig = 1;    % a counter for the number of figures
     end
+    
     
     %% --------------------------------------------------------------------
     % Constructor
@@ -56,11 +81,16 @@ classdef HilbertHuang_class
             addParameter(p,'IMFs',timeseries(),checkTsType)
             addParameter(p,'Hilbert',false,@islogical)
             addParameter(p,'Window','none',@ischar)
+            addParameter(p,'EmdOpts',obj.emdOpts,@isstruct)
+            addParameter(p,'HilOpts',obj.hilOpts,@isstruct)
             
             parse(p,varargin{:})
             obj.Ts_In = p.Results.TimeSeries;
             obj.IMFs = p.Results.IMFs;
             obj.Window = p.Results.Window;
+            obj.emdOpts = p.Results.EmdOpts;
+            obj.hilOpts = p.Results.HilOpts;
+            
             
             if p.Results.EMD
                 obj = obj.Emd();
@@ -82,7 +112,7 @@ classdef HilbertHuang_class
     end
  
      
-%%-------------------------------------------------------------------------
+%% -------------------------------------------------------------------------
 %Public methods to calculate the IMFs using EMD and to calculate the Hilbert Transform
 % also a public methog to create plots
 methods (Access = public)
@@ -91,7 +121,7 @@ methods (Access = public)
     plot(obj,varargin)
 end
 
-%%-------------------------------------------------------------------------
+%% -------------------------------------------------------------------------
 methods (Access = public)
    
     function obj = calcHHT(obj,timeSeries)
@@ -107,5 +137,24 @@ methods (Access = public)
     end
     
 end
+
+%% -------------------------------------------------------------------------
+methods (Static)
+    % Static methods to get default options values
+    function [EmdOpts,HilOpts] = getDefaultOpts()
+        EmdOpts = struct('MaxNumIMFs',10,...
+            'MaxEnergyRatio',20,...
+            'MaxNumExtrema',1,...
+            'SiftMaxIterations',100,...
+            'SiftRelativeTolarance',0.2,...
+            'Interpolation','spline');
+        
+        HilOpts = struct('FreqLimits',[],...
+            'FreqResolution',[],...
+            'MinThreshold',-inf);
+        
+    end
+    
 end
 
+end
