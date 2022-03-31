@@ -308,10 +308,10 @@ classdef TestSpectral < matlab.unittest.TestCase
             testCase.TS = AnalyticTS_class();  % instantiate a default class (this creates a 50 Hz signal)
             signalParams = testCase.TS.SignalParams;
             [~,~,Ps,~,~,~,~,~,~,~,~,~,~,~,~,Kn,Fn] = testCase.TS.getParamIndex();
-            signalParams(Ps,:)=-90;     % sine wave
+            %signalParams(Ps,:)=-90;     % sine wave
             signalParams(Kn,:)=0.02;
             testCase.TS = AnalyticTS_class('SignalParams',signalParams);
-            testCase.TS.Ts.Name = 'testHht50Hz Noisey';
+            testCase.TS.Ts.Name = 'testHht50Hz Noisy';
             
             AnalysisCycles = 1;
             Window = testCase.TS.getWindow(0,AnalysisCycles);
@@ -319,20 +319,19 @@ classdef TestSpectral < matlab.unittest.TestCase
             
             % EMD tuning experiments
             [emdOpts,hilOpts] = HilbertHuang_class.getDefaultOpts();
-            %endOpts = 
+            emdOpts.MaxEnergyRatio = 1*emdOpts.MaxEnergyRatio;
             
             
             hilOpts.FreqLimits = [0,100];
             %hilOpts.FreqResolution = 0.001;
             
-            HHT = HilbertHuang_class('TimeSeries',Window,'HilOpts',hilOpts,'EMD',true,'Window','none','Hilbert',true);
+            HHT = HilbertHuang_class('TimeSeries',Window,...
+                                     'HilOpts',hilOpts,...
+                                     'EmdOpts',emdOpts,...
+                                     'EMD',true,...
+                                     'Window','none',...
+                                     'Hilbert',true);
             plot(HHT,'IMFs','Spectrum');
-            
-
-
-            
-        
-            
         end
         
         function testCase = testHhtFmAnalysis(testCase)

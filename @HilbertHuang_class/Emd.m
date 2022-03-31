@@ -73,19 +73,19 @@ while(i<obj.emdOpts.MaxNumIMFs)
        end
        
        %------PLOT the rsig and the peak indexes
-       figure(100)
-       plot(rsigL,'-k')
-       hold on
-       pause
-       plot(peaksIdx,rsigL(peaksIdx),'og')
-       plot(bottomsIdx,rsigL(bottomsIdx),'db')
-       pause
-       plot(upperEnvelope,'-g')
-       plot(lowerEnvelope,'-b')
-       pause
-       plot (mVal,'-r')
-       hold off
-       pause
+%        figure(100)
+%        plot(rsigL,'-k')
+%        hold on
+%        pause
+%        plot(peaksIdx,rsigL(peaksIdx),'og')
+%        plot(bottomsIdx,rsigL(bottomsIdx),'db')
+%        pause
+%        plot(upperEnvelope,'-g')
+%        plot(lowerEnvelope,'-b')
+%        pause
+%        plot (mVal,'-r')
+%        hold off
+%        pause
        %------
        
        rsigL = rsigL - mVal;
