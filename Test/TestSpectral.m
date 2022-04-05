@@ -49,7 +49,7 @@ classdef TestSpectral < matlab.unittest.TestCase
             %--------------------------------------------------------------
             % Tests of Hilbert Huang based analysis
 %            testHhtQuadChirp(testCase);
-             testHht50Hz(testCase);
+%             testHht50Hz(testCase);
 %             testHhtFmAnalysis(testCase);
 %             testHhtFmActualData(testCase);
 %             testHht13Harmonic(testCase);
