@@ -16,9 +16,13 @@ function [startpt] = GridSearch(obj)
 % reach a threshold of the objective function, we know our
 % start value will be good enough.  Typically we get less than 36 fevals
 
+%Experiment: Df = 25 no matter what
+%Delta_Freq = 25;
 Fin = obj.Fcarr;
+
 Fm = obj.Fm(obj.phase);
 Km = obj.Km(obj.phase);
+%Km = Delta_Freq/obj.Km(obj.phase);
 dT = obj.dT;
 Delta_Freq = Fm.*Km;
 
@@ -42,11 +46,15 @@ p02 = 0.04632;
 
 thrLog = p00 + p10.*Km + p01.*Fm + p20.*Km.^2 + p11.*Km.*Fm + p02.*Fm.^2;
 %thrLog = p00 + p10.*Fm + p01.*Km + p20.*Fm.^2 + p11.*Fm.*Km + p02.*Km.^2;
-ePoint = 10^(thrLog + 1i*(pi/log(10)));
+%ePoint = 10^(thrLog + 1i*(pi/log(10)));
+ePoint = -10^(thrLog);
 
 % The threshold is scaled by the number of samples.  The above was sampled
 % at 4800 samples per second.
-thresh = real(ePoint) * (0.5/(4800*obj.dT));
+%thresh = real(ePoint) * (0.5/(4800*obj.dT));
+modCycles = length(obj.Samples(:,obj.phase))*dT*Fm;
+thresh = ePoint * (0.5/(4800*obj.dT))*modCycles;
+
 %thresh = -3000;
 % display the threshold
 if obj.verbose

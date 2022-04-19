@@ -123,13 +123,14 @@ classdef test_FM_BSA < matlab.unittest.TestCase
         end
         
         function experiments(self)
-            %FcarrDfContour(self) 
-            self.debug=true;  % If you want to see all the contour plots
+            FcarrDfContour(self) 
+            %self.debug=true;  % If you want to see all the contour plots
             %GridSearchThreshold(self)
             %FmKmRange(self)
             %test50f0_2m0_2a5_1Phase(self); self.fig=self.fig+1; % Phase Modulation, fm = 2, k = 2.5
             %test50f0_2m0_0a5_16000(self); self.fig=self.fig+1;
-            test50f0_2m0_0a5_48000(self); self.fig=self.fig+1;
+            %test50f0_2m0_0a5_48000(self); self.fig=self.fig+1;
+            %testModCycles(self)
             
         end
     end
@@ -216,13 +217,154 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             
             [ ~, ~, ~, ~, ~, ~, Fa, Ka, ~, ~] = self.getParamIndex();
             self.SignalParams(Fa,:) = 2.0;
-            self.SignalParams(Ka,:) = 2.5;
+            self.SignalParams(Ka,:) = 5.0;
             self.AnalysisCycles = self.F0/self.SignalParams(Fa,1);  % one modulation cycle
             self.getTimeSeries();
             self.TS.Ts.Name = 'test50f0_0a5_48000';
             self.runMod1Second(true);           
-        end          
+        end  
         
+        function testModCycles(self)
+           % test for numbers of modulation cycles not equal to 1
+           % Cycle through modulation cycles from 0.25 to 4 at 0.25 cycle increments
+           mcStart = 0.25;
+           mcIncr = 0.25;
+           mcEnd = 4;
+           grid = 20;
+           res = 30;
+           Fm = 2.0;
+           Km = 2.5;
+           
+           self.Fs = 48000;
+           self.Duration = 4;
+           self.SignalParams = zeros(15,1);        % only one phase of data
+           [Xm, Fin, Ps, ~, ~, ~, Fa, Ka] = self.getParamIndex();
+           self.SignalParams(Xm,:) = 1;
+           self.SignalParams(Fin,:) = 50;
+           self.SignalParams(Ps,:) = 0;
+           self.SignalParams(Fa,:) = Fm;
+           self.SignalParams(Ka,:) = Km;       
+           
+           
+            % Set up a table for the results
+            nRows = (round((mcEnd-mcStart)/mcIncr)+1);
+            varNames = {'mc','zMin'};
+            varTypes = {'double','double'};
+            T = table('Size',[nRows,length(varNames)],'VariableTypes',varTypes,'VariableNames',varNames);
+            dT = 1/self.Fs;    % sampling period
+            dF = 2*pi*self.SignalParams(Fa,:)*self.SignalParams(Ka,:)*dT;           
+            self.getTimeSeries();
+            self.TS.Ts.Name = 'testModCycles';
+            
+            %---------------Movie Making----------------
+            if self.makeAnimation
+                self.vidfile = VideoWriter('GridSearchModCycles.mp4','MPEG-4');
+                open(self.vidfile);
+            end
+            %-------------------------------------------            
+            
+ 
+            p=1;
+            for mc = mcStart:mcIncr:mcEnd
+                self.AnalysisCycles = mc*self.F0/self.SignalParams(Fa,1);  % one modulation cycle
+                self.Window = self.TS.getWindow(0,self.AnalysisCycles,self.even);
+                               
+                FM = FM_BSA_Class(...
+                    self.SignalParams(Fin,:),...
+                    self.SignalParams(Fa,:),...
+                    self.SignalParams(Ka,:),...
+                    dT,...
+                    real(self.Window.Data)...
+                    );
+                
+                FM.phase = 1;
+                startPt1 = 2*pi*self.SignalParams(Fin,1)*dT;
+                OMEGA2 = linspace(-pi,pi,grid);
+                OMEGA3 = linspace(0,2*dF,grid);
+                
+                if self.debug
+                    figure(self.fig)
+                    OMEGA = [startPt1,startPt1;-pi,pi;0,2*dF];
+                    FM.fcontour3(OMEGA,res,@FM.objFun)
+                    view([45,10])
+                    %zlim([-3e4,0])   % set the axis limits if you do not want autoscaling
+                    %ylim([0,0.04])
+                    %xlim([0,pi])
+                    title(sprintf('ModCycles = %1.2f',mc),'FontSize',18)
+                    hold on
+                end
+                
+                z = zeros(grid,grid);
+                for k = 1:grid
+                    for j = 1:grid
+                        z(j,k) = FM.objFun([startPt1,OMEGA2(j),OMEGA3(k)]);
+                        if self.debug
+                            plot3(OMEGA2(j),OMEGA3(k),z(j,k),'*')
+                        end
+                    end
+                end
+                
+                if mc == 1,zMin1=min(min(z));end
+
+                
+                if self.debug
+                    xl = xlim;
+                    yl = ylim;
+                    
+                    %-----------------
+                    % code to show why we do not want a -3000 fixed threshold
+                    %                         yPatch = [yl(1), yl(2),  yl(2), yl(1)];
+                    %                         zPatch = [-3000,-3000,-3000,-3000];
+                    %                         pch=patch(xPatch,yPatch,zPatch,'red');
+                    %                        alpha(pch,.3)
+                    %------------------
+                    
+                    hold off
+                    refresh
+                    %----------------- Write Video --------------------
+                    if self.makeAnimation
+                        frame = getframe(gcf);
+                        for v = 1:16
+                            writeVideo(self.vidfile,frame)
+                        end
+                    end
+                    %--------------------------------------------------
+                end
+                
+                % Store the parameters and the minimum function value
+                T(p,:) = {mc,min(min(z))};
+                p = p+1;
+                
+            end
+            
+            % save the table to a file so we can fool around with it later.
+            %writetable(T,'GridSearchModCycleValues.csv')
+            
+            
+            % plot the surface
+            %nX = length(unique(x)); nY=length(unique(y));
+            %self.fig=self.fig+1;
+            x = T{:,'mc'};
+            y = T{:,'zMin'}./zMin1;
+            %figure(self.fig);self.fig=self.fig+1;
+            plot(x,y)
+
+            xlabel('# of modulation cycles')
+            ylabel('Minimum objective function value')
+            title('Fm = 2, Km = 2.5 min obj function value for # of mod cycles')
+            %---------- Movie making --------------------------------
+            if (self.debug && self.makeAnimation)
+                frame = getframe(gcf);
+                for v = 1:24
+                    writeVideo(self.vidfile,frame)
+                end
+            end
+            %--------------------------------------------------------
+                            
+                
+            end
+            
+                    
         % Experiments
         %------------------------------------------------------------------
         function FcarrDfContour(self)
@@ -266,14 +408,28 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             omega_F_dF = [[wCarr/2,wCarr*2];[0,0];[0,2*dF]];
             FM.phase = 1;
             FM.fcontour3(omega_F_dF,30,@FM.objFun);
+            % The axes need to be changed from radians per sample to Hz
+            f = gca;
+            ticks = f.XTick;            
+            f.XTickLabel = self.tickLabels(ticks,dT);
+            ticks = f.YTick;            
+            f.YTickLabel = self.tickLabels(ticks,dT);
             
+                        
             figure(self.fig),self.fig = self.fig+1;
             omega_F_phi = [[wCarr/2,wCarr*2];[-pi,pi];[dF,dF];];
             FM.fcontour3(omega_F_phi,30,@FM.objFun);
+            f = gca;
+            ticks = f.XTick;            
+            f.XTickLabel = self.tickLabels(ticks,dT);            
             
             figure(self.fig),self.fig = self.fig+1;
             omega_phi_dF = [[wCarr,wCarr];[-pi,pi];[0,2*dF]];
-            FM.fcontour3(omega_phi_dF,30,@FM.objFun);                       
+            FM.fcontour3(omega_phi_dF,30,@FM.objFun); 
+            f = gca;
+            ticks = f.YTick;            
+            f.YTickLabel = self.tickLabels(ticks,dT);
+            
         end
         
         function GridSearchThreshold(self)
@@ -501,7 +657,7 @@ classdef test_FM_BSA < matlab.unittest.TestCase
                 for Fm = FmStart:FmIncr:FmEnd
                     self.SignalParams(Fa,:) =Fm;
                     self.SignalParams(Ka,:) = Km;
-                    self.AnalysisCycles =  ceil(self.SignalParams(Fin,1)/self.SignalParams(Fa,1));
+                     self.AnalysisCycles =  ceil(self.SignalParams(Fin,1)/self.SignalParams(Fa,1));
                     
                     self.getTimeSeries();
                     self.Window = self.TS.getWindow(0,self.AnalysisCycles,self.even);
@@ -730,7 +886,16 @@ classdef test_FM_BSA < matlab.unittest.TestCase
             plot(RFE');
             title('RFE (Hz/s)')
                         
-        end        
+        end  
+        
+        function labels = tickLabels(ticks,dT)
+            ticks = ticks/(2*pi*dT);
+            labels = cell(1,length(ticks));
+            for i=1:length(ticks)
+                labels(i) = cellstr(num2str(round(ticks(i))));
+            end                        
+        end
+            
         
     end
     

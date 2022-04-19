@@ -40,7 +40,7 @@
                     if ip==2
                         yLbl='Phase (rad)';
                     else
-                        yLbl='Delta Freq (Hz/s)';
+                        yLbl='Frequency Deviation (Hz)';
                     end
                 end
             end
@@ -60,5 +60,5 @@
         end
         close(wb)
         contour3(x,y,zp,resolution,'-k')
-        xlabel(xLbl),ylabel(yLbl),zlabel('f eval')
+        xlabel(xLbl),ylabel(yLbl),zlabel('objective function value')
     end
